@@ -1,19 +1,19 @@
 from rest_framework import serializers
 
-from journeys.models import Journey, User, Comment, PlaceVisit
+import journeys
+from journeys.models import Journey, User, Comment, PlaceVisit, Tag
 
 
-class JourneySerializer(serializers.ModelSerializer):
+
+class TagSerializer(serializers.ModelSerializer):
     class Meta:
-        model = Journey
-        fields = '__all__'
-
-class AddJourneySerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Journey
-        fields = ['active','name','description']
+        model = Tag
+        fields = ['id', 'name']
 
 
+class BaseSerializer(serializers.ModelSerializer):
+    image = serializers.SerializerMethodField(source='image')
+    tags = TagSerializer(many=True)
 
 class UserSerializer(serializers.ModelSerializer):
     password = serializers.CharField(
@@ -37,6 +37,24 @@ class UserSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         return User.objects.create_user(**validated_data)
 
+class JourneySerializer(BaseSerializer):
+    user_journey = UserSerializer()
+    class Meta:
+        model = Journey
+        fields = ['id', 'name', 'main_image', 'tags', 'description', 'user_journey']
+
+
+class JourneyDetailSerializer(BaseSerializer):
+    class Meta:
+        model = Journey
+        fields = ['id', 'name', 'main_image', 'tags', 'description']
+
+
+class AddJourneySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Journey
+        fields = ['active','name','description']
+
 class LoginSerializer(serializers.ModelSerializer):
     password = serializers.CharField(
         max_length=65, min_length=8, write_only=True)
@@ -48,6 +66,7 @@ class LoginSerializer(serializers.ModelSerializer):
 
 
 class CommentSerializer(serializers.ModelSerializer):
+    user = UserSerializer()
     class Meta:
         model = Comment
         fields = ['id', 'cmt', 'user']

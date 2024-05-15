@@ -1,30 +1,52 @@
 from rest_framework import generics, viewsets, parsers, permissions, status
-from rest_framework.decorators import action, api_view
+from rest_framework.decorators import action
 from rest_framework.response import Response
-from rest_framework.viewsets import GenericViewSet
 from django.contrib import auth
-from journeys import serializers
-from journeys.models import Journey, User
+from journeys import serializers, perms
+from journeys.models import Journey, User, Comment
 import jwt
 from django.conf import settings
 
 from journeys.serializers import UserSerializer
 
-
 class JourneyViewSet(viewsets.ViewSet, generics.ListAPIView):
     queryset = Journey.objects.all()
     serializer_class = serializers.JourneySerializer
+    # permission_classes = [permissions.AllowAny]
+
+    # def get_permissions(self):
+    #     if self.action in ['add_comment', 'add_journey']:
+    #         return [permissions.IsAuthenticated()]
+    #
+    #     return self.permission_classes
 
     @action(methods=['post'], detail=False, url_path='addjourney', url_name='add_journey')
     def add_journey(self, request):
+        fixed_user = User.objects.get(pk=3)
+
+        # Tạo Journey với thông tin người dùng cố định
         j = Journey.objects.create(
             name=request.data.get('name'),
             description=request.data.get('description'),
-            active=request.data.get('active')
+            user_journey=fixed_user
         )
         if request.method == 'POST':
             return Response(serializers.AddJourneySerializer(j).data, status=status.HTTP_201_CREATED)
 
+
+
+
+class JourneyDetailViewSet(viewsets.ViewSet, generics.RetrieveAPIView):
+    queryset = Journey.objects.all()
+    serializer_class = serializers.JourneyDetailSerializer
+    # permission_classes = [permissions.AllowAny]
+
+    @action(methods=['post'], url_path='comments', detail=True)
+    def add_comment(self, request, pk):
+        fixed_user = User.objects.get(pk=3)#gán cứng user
+        c = Comment.objects.create(user=fixed_user, journey=self.get_object(), cmt=request.data.get('cmt'))
+        # user = request.user,
+        return Response(serializers.CommentSerializer(c).data, status=status.HTTP_201_CREATED)
 
 class JourneyRetrieveUpdateDestory(generics.RetrieveUpdateDestroyAPIView):
     queryset = Journey.objects.all()
@@ -42,7 +64,7 @@ class UserViewSet(viewsets.ViewSet, generics.CreateAPIView):
 
         return [permissions.AllowAny()]
 
-    @action(methods=['get'], url_path='current-user' ,url_name='current-user', detail=False)
+    @action(methods=['get'], url_path='current-user',url_name='current-user', detail=False)
     def current_user(self, request):
         return Response(serializers.UserSerializer(request.user).data)
 
@@ -56,6 +78,26 @@ class RegisterViewSet(generics.GenericAPIView):
             serializer.save()
             return Response(serializer.data,status=status.HTTP_201_CREATED)
         return Response(serializer.errors,status=status.HTTP_400_BAD_REQUEST)
+
+
+class CommentViewSet(viewsets.ViewSet, generics.ListAPIView):
+    queryset = Comment.objects.all()
+    serializer_class = serializers.CommentSerializer
+    permission_classes = [perms.OwnerAuthenticated]
+
+
+class CommentRetrieveUpdateDestory(generics.RetrieveUpdateDestroyAPIView):
+    queryset = Comment.objects.all()
+    serializer_class = serializers.CommentSerializer
+    lookup_field = "id"
+
+
+
+class JourneyRetrieveUpdateDestory(generics.RetrieveUpdateDestroyAPIView):
+    queryset = Journey.objects.all()
+    serializer_class = serializers.JourneySerializer
+    lookup_field = "id"
+
 
 
 class LoginView(generics.GenericAPIView):

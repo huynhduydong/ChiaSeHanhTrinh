@@ -11,6 +11,7 @@ import {
 //create a variable which reference to a function 
 import {images, icons, colors, fontSizes} from '../constants'
 import Icon from 'react-native-vector-icons/FontAwesome5'
+import UIButton from '../components/UIButton';
 
 function Welcome(props) {
     //state => when a state is changed => UI is reloaded    
@@ -111,7 +112,26 @@ function Welcome(props) {
                     fontSize: fontSizes.h6, 
                 }}>Please select your account type</Text>
             </View>
-
+            <View style={{
+                flex: 40,                
+            }}>
+                {accountTypes.map(accountType => 
+                    <UIButton 
+                        key={accountType.name}
+                        onPress={() => {                                         
+                        //accountTypes = newAccountTypes => DONOT DO THIS !
+                        setAccountTypes(accountTypes.map(eachAccountType => {
+                            return {
+                                ...eachAccountType, 
+                                isSelected: eachAccountType.name == accountType.name
+                            }                            
+                        }));
+                    }}
+                        title={accountType.name}
+                        isSelected={accountType.isSelected}
+                    />)
+                }                              
+            </View>
 
             <View style={{
                 flex: 20,                    

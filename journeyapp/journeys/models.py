@@ -2,11 +2,13 @@ from ckeditor.fields import RichTextField
 from django.contrib.auth.models import AbstractUser
 from django.db import models
 from cloudinary.models import CloudinaryField
+from django.shortcuts import get_object_or_404
 
 
 class User(AbstractUser):
     avatar = CloudinaryField('avatar', null=False)
     role = models.CharField(max_length=255)
+
 
     def __str__(self):
         return self.username
@@ -36,6 +38,7 @@ class Journey(BaseModel):
     main_image = models.ImageField(upload_to='journeys/%Y/%m', default=None)
     description = RichTextField(null=True, default=None)
     user_journey = models.ForeignKey(User, on_delete=models.CASCADE, null=True)
+    tags = models.ManyToManyField('Tag')
 
     def __str__(self):
         return self.name
@@ -47,6 +50,13 @@ class Interaction(BaseModel):
 
     class Meta:
         abstract = True
+
+
+class Tag(BaseModel):
+    name = models.CharField(max_length=50, unique=True)
+
+    def __str__(self):
+        return self.name
 
 
 class Comment(Interaction):
