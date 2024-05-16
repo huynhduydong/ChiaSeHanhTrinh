@@ -1,8 +1,7 @@
 from rest_framework import serializers
 
 import journeys
-from journeys.models import Journey, User, Comment, PlaceVisit, Tag
-
+from journeys.models import Journey, User, Comment, PlaceVisit, Tag, JoinJourney
 
 
 class TagSerializer(serializers.ModelSerializer):
@@ -24,7 +23,7 @@ class UserSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ['username', 'first_name', 'last_name', 'email', 'password'
+        fields = ['id', 'username', 'first_name', 'last_name', 'email', 'password'
                   ]
 
     def validate(self, attrs):
@@ -53,7 +52,7 @@ class JourneyDetailSerializer(BaseSerializer):
 class AddJourneySerializer(serializers.ModelSerializer):
     class Meta:
         model = Journey
-        fields = ['active','name','description']
+        fields = ['active', 'name', 'description']
 
 class LoginSerializer(serializers.ModelSerializer):
     password = serializers.CharField(
@@ -67,9 +66,18 @@ class LoginSerializer(serializers.ModelSerializer):
 
 class CommentSerializer(serializers.ModelSerializer):
     user = UserSerializer()
+
     class Meta:
         model = Comment
-        fields = ['id', 'cmt', 'user']
+        fields = ['id', 'cmt', 'user', 'created_date']
+
+
+class JoinJourneySerializer(serializers.ModelSerializer):
+    user = UserSerializer()
+
+    class Meta:
+        model = JoinJourney
+        fields = ['id', 'user', 'created_date']
 
 
 class PlaceVisitSerializer(serializers.ModelSerializer):

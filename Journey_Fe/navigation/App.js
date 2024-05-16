@@ -27,9 +27,9 @@ function App(props) {
             headerShown: false
         }}>
             <Stack.Screen name={"JourneyList"} component={JourneyList}/>   
-            {/* <Stack.Screen name={"AddJourney"} component={AddJourney}/>   */}
-            {/* <Stack.Screen name={"TempScreen"} component={TempScreen}/>   */}
-            {/* <Stack.Screen name={"LoginScreen"} component={LoginScreen}/>   */}
+            <Stack.Screen name={"AddJourney"} component={AddJourney}/>  
+            <Stack.Screen name={"TempScreen"} component={TempScreen}/>  
+            <Stack.Screen name={"LoginScreen"} component={LoginScreen}/>  
 
             <Stack.Screen name={"JourneyDetail"} component={JourneyDetail}/>
       

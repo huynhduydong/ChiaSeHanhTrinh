@@ -7,12 +7,12 @@ router.register('journeys', views.JourneyDetailViewSet, basename='journey_detail
 router.register('journeys', views.JourneyViewSet, basename='journeys')
 router.register('user', views.UserViewSet, basename='user')
 
-
-
 urlpatterns = [
     path('', include(router.urls)),
     path('journeys/<int:id>', views.JourneyRetrieveUpdateDestory.as_view(),name='update'),
     path('comment/<int:id>',  views.CommentRetrieveUpdateDestory.as_view(),name='update_comment'),
+    path('join/<int:id>', views.JoinJourneyRetrieveUpdateDestory.as_view(), name='update_join'),
+
     path('register', views.RegisterViewSet.as_view()),
     path('login', views.LoginView.as_view()),
 

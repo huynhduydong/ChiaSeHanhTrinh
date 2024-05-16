@@ -3,7 +3,13 @@ import axios from "axios";
 export const endpoints = {
     journeys:'/journeys/',
     'journeys_detail': (JourneyId) => `/journeys/${JourneyId}`,
-    addjourney:'/journeys/addjourney/'
+    addjourney:'/journeys/addjourney/',
+    'comments': (JourneyId) => `/journeys/${JourneyId}/comments/`,
+    'add_comments': (JourneyId) => `/journeys/${JourneyId}/comments/`,
+    'join_detail': (JourneyId) => `/journeys/${JourneyId}/join/`,
+    'add_join': (JourneyId) => `/journeys/${JourneyId}/join/`,
+
+
 }
 
 export const authAPI = async () => {

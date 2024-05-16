@@ -64,7 +64,7 @@ class Comment(Interaction):
 
 
 class JoinJourney(Interaction):
-    content = models.CharField(max_length=200, null=False)
+    pass
 
 
 class Rating(Interaction):
