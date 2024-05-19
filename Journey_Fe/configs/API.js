@@ -8,7 +8,7 @@ export const endpoints = {
     'add_comments': (JourneyId) => `/journeys/${JourneyId}/comments/`,
     'join_detail': (JourneyId) => `/journeys/${JourneyId}/join/`,
     'add_join': (JourneyId) => `/journeys/${JourneyId}/join/`,
-
+    'journey_by_user': (userId) => `/journeys/${userId}/journey_by_user/`,
 
 }
 

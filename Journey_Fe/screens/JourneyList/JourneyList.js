@@ -5,26 +5,31 @@ import {
   FlatList,
   StyleSheet,
   TouchableOpacity,
-  ScrollView,
-  Image
-} from 'react-native'
+  Image,
+  Button
+} from 'react-native';
 import API, { endpoints } from '../../configs/API';
 
 const JourneyList = ({ route, navigation }) => {
   const [journeys, setJourneys] = useState([]);
+
   useEffect(() => {
     fetchJourneys();
   }, []);
+
   const fetchJourneys = async () => {
     try {
       const response = await API.get(endpoints['journeys']);
-
       setJourneys(response.data);
     } catch (error) {
       console.error('Error fetching journeys:', error);
     }
   };
-  
+
+  const goToJourneyDetail = (JourneyId) => {
+    navigation.navigate("JourneyDetail", { "JourneyId": JourneyId });
+  }
+
   const renderItem = ({ item }) => (
     <TouchableOpacity onPress={() => goToJourneyDetail(item.id)}>
       <View style={styles.item}>
@@ -36,14 +41,14 @@ const JourneyList = ({ route, navigation }) => {
           <Text style={styles.title}>{item.name}</Text>
           <Text style={styles.title}> Username Tác giả: {item.user_journey.username}</Text>
           <Text style={styles.title}>Tên tác giả: {item.user_journey.first_name} {item.user_journey.last_name}</Text>
+          <TouchableOpacity style={styles.button} onPress={() => goToJourneyDetail(item.id)}>
+          <Text style={styles.buttonText}>Cập nhật</Text>
+        </TouchableOpacity>
         </View>
       </View>
     </TouchableOpacity>
   );
 
-  const goToJourneyDetail = (JourneyId) => {
-    navigation.navigate("JourneyDetail", { "JourneyId": JourneyId })
-  }
   return (
     <View style={styles.container}>
       <FlatList
@@ -52,19 +57,18 @@ const JourneyList = ({ route, navigation }) => {
         keyExtractor={(item) => item.id.toString()}
       />
     </View>
-
   );
-
 }
+
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
-    padding: 10,
+     flex: 1,
+    padding: 16,
+    backgroundColor: '#F5F5F5',
   },
   item: {
-    flexDirection: 'row',
-    backgroundColor: '#fff',
-    padding: 10,
+    backgroundColor: '#EDE7F6',
+    padding: 15,
     marginVertical: 8,
     borderRadius: 8,
     elevation: 2, // Adds shadow for Android
@@ -73,31 +77,35 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.25,
     shadowRadius: 3.84,
   },
-  image: {
-    width: 80,
-    height: 80,
-    borderRadius: 8,
+   image: {
+    height: 200,
+    marginBottom: 16,
+    borderRadius: 10,
   },
   textContainer: {
-    flex: 1,
-    marginLeft: 10,
-  },
-  date: {
-    fontSize: 14,
-    color: '#888',
+    marginTop: 10,
   },
   title: {
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: 'bold',
+    color: '#333',
   },
-  author: {
+  details: {
     fontSize: 14,
-    color: '#555',
+    color: '#666',
+    marginVertical: 2,
   },
-  shares: {
-    fontSize: 12,
-    color: '#aaa',
+  button: {
+    marginTop: 10,
+    paddingVertical: 10,
+    backgroundColor: '#7B61FF',
+    borderRadius: 5,
+    alignItems: 'center',
+  },
+  buttonText: {
+    color: '#fff',
+    fontWeight: 'bold',
   },
 });
 
-export default JourneyList
+export default JourneyList;

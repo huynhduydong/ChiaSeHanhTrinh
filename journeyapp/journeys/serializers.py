@@ -1,4 +1,5 @@
 from rest_framework import serializers
+from rest_framework.fields import SerializerMethodField
 
 import journeys
 from journeys.models import Journey, User, Comment, PlaceVisit, Tag, JoinJourney
@@ -36,23 +37,42 @@ class UserSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         return User.objects.create_user(**validated_data)
 
+
 class JourneySerializer(BaseSerializer):
     user_journey = UserSerializer()
+    main_image = SerializerMethodField()
+
+    def get_main_image(self, obj):
+        return obj.main_image.url
+
     class Meta:
         model = Journey
         fields = ['id', 'name', 'main_image', 'tags', 'description', 'user_journey']
 
 
+class UpdateJourneySerializer(BaseSerializer):
+
+    class Meta:
+        model = Journey
+        fields = ['id', 'name', 'main_image', 'description']
+
+
+
 class JourneyDetailSerializer(BaseSerializer):
+    main_image = SerializerMethodField()
+    def get_main_image(self, obj):
+        return obj.main_image.url
     class Meta:
         model = Journey
         fields = ['id', 'name', 'main_image', 'tags', 'description']
+
 
 
 class AddJourneySerializer(serializers.ModelSerializer):
     class Meta:
         model = Journey
         fields = ['active', 'name', 'description']
+
 
 class LoginSerializer(serializers.ModelSerializer):
     password = serializers.CharField(

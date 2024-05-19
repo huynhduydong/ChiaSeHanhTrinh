@@ -48,13 +48,14 @@ INSTALLED_APPS = [
     'drf_yasg',
 ]
 
-import cloudinary
+
 CKEDITOR_UPLOAD_PATH = "ckeditor/images/"
 
+import cloudinary
 cloudinary.config(
-    cloud_name="dr2sclnyl",
-    api_key="248954445761623",
-    api_secret="aU7Lp9vkhojG1peX4dWTmy1jhLU"
+    cloud_name="dxodnq83l",
+    api_key="637241295493853",
+    api_secret="MbBTnCHTqtEfq8XywUviHGg_-6M"
 )
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',

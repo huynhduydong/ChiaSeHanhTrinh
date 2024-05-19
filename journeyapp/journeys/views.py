@@ -1,13 +1,17 @@
+import cloudinary
 from rest_framework import generics, viewsets, parsers, permissions, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from django.contrib import auth
+from rest_framework.views import APIView
+
 from journeys import serializers, perms
 from journeys.models import Journey, User, Comment, JoinJourney
 import jwt
 from django.conf import settings
 
-from journeys.serializers import UserSerializer
+from journeys.serializers import UserSerializer, UpdateJourneySerializer
+
 
 class JourneyViewSet(viewsets.ViewSet, generics.ListAPIView):
     queryset = Journey.objects.all()
@@ -33,7 +37,24 @@ class JourneyViewSet(viewsets.ViewSet, generics.ListAPIView):
         if request.method == 'POST':
             return Response(serializers.AddJourneySerializer(j).data, status=status.HTTP_201_CREATED)
 
-
+    @action(url_path='journey_by_user',detail=True, methods=['get'])
+    def journeys(self, request, pk=None):
+        user = User.objects.get(pk=pk)
+        journeys = Journey.objects.filter(user_journey=user)
+        data = []
+        for journey in journeys:
+            comments_count = Comment.objects.filter(journey=journey).count()
+            join_count = JoinJourney.objects.filter(journey=journey).count()
+            data.append({
+                'id': journey.id,
+                'name': journey.name,
+                'created_date': journey.created_date,
+                'main_image': journey.main_image.url,
+                'updated_date': journey.updated_date,
+                'comments_count': comments_count,
+                'join_count': join_count
+            })
+        return Response(data, status=status.HTTP_200_OK)
 
 
 class JourneyDetailViewSet(viewsets.ViewSet, generics.RetrieveAPIView):
@@ -68,10 +89,6 @@ class JourneyDetailViewSet(viewsets.ViewSet, generics.RetrieveAPIView):
             return Response(serializers.JoinJourneySerializer(c).data, status=status.HTTP_201_CREATED)
 
 
-class JourneyRetrieveUpdateDestory(generics.RetrieveUpdateDestroyAPIView):
-    queryset = Journey.objects.all()
-    serializer_class = serializers.JourneySerializer
-    lookup_field = "id"
 
 
 class UserViewSet(viewsets.ViewSet, generics.CreateAPIView):
@@ -116,14 +133,31 @@ class CommentRetrieveUpdateDestory(generics.RetrieveUpdateDestroyAPIView):
     serializer_class = serializers.CommentSerializer
     lookup_field = "id"
 
-
+# class JourneyRetrieveUpdateDestory(generics.UpdateAPIView):
+#     queryset = Journey.objects.all()
+#     serializer_class = serializers.UpdateJourneySerializer
+#     lookup_field = "id"
+#     def partial_update(self, request, *args, **kwargs):
+#         journey = self.get_object()
+#         serializer = serializers.UpdateJourneySerializer(journey, data=request.data)
+#         if serializer.is_valid():
+#             main_image = request.data.get('main_image')
+#             if journey.main_image:
+#                 public_id = journey.main_image.public_id
+#                 cloudinary.uploader.destroy(public_id)
+#             if main_image:
+#                 uploaded_avatar = cloudinary.uploader.upload(main_image, folder=f'user-avt/{journey.id}/',
+#                                                              orverwrite=True)
+#                 journey.main_image = uploaded_avatar['secure_url']
+#                 journey.save()
+#             serializer.save()
+#             return Response(serializer.data)
+#         return Response(serializer.errors, status=400)
 
 class JourneyRetrieveUpdateDestory(generics.RetrieveUpdateDestroyAPIView):
     queryset = Journey.objects.all()
     serializer_class = serializers.JourneySerializer
     lookup_field = "id"
-
-
 
 class LoginView(generics.GenericAPIView):
     serializer_class = serializers.LoginSerializer

@@ -35,13 +35,14 @@ class BaseModel(models.Model):
 
 class Journey(BaseModel):
     name = models.CharField(max_length=150, null=False)
-    main_image = models.ImageField(upload_to='journeys/%Y/%m', default=None)
+    main_image = CloudinaryField('main_image', null=True)
     description = RichTextField(null=True, default=None)
     user_journey = models.ForeignKey(User, on_delete=models.CASCADE, null=True)
     tags = models.ManyToManyField('Tag')
 
     def __str__(self):
         return self.name
+
 
 
 class Interaction(BaseModel):
