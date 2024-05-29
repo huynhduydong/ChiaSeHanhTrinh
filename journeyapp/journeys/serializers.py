@@ -2,7 +2,8 @@ from rest_framework import serializers
 from rest_framework.fields import SerializerMethodField
 
 import journeys
-from journeys.models import Journey, User, Comment, PlaceVisit, Tag, JoinJourney
+from journeyapp import settings
+from journeys.models import Journey, User, Comment, PlaceVisit, Tag, JoinJourney, ImageJourney, CommentImageJourney
 
 
 class TagSerializer(serializers.ModelSerializer):
@@ -12,8 +13,16 @@ class TagSerializer(serializers.ModelSerializer):
 
 
 class BaseSerializer(serializers.ModelSerializer):
-    image = serializers.SerializerMethodField(source='image')
+    main_image = serializers.SerializerMethodField(source='image')
     tags = TagSerializer(many=True)
+    def get_main_image(self, journey):
+
+        if journey.main_image:
+            request = self.context.get('request')
+            if request:
+                return request.build_absolute_uri('/static/%s' % journey.main_image.name)
+            return '/static/%s' % journey.main_image.name
+
 
 class UserSerializer(serializers.ModelSerializer):
     password = serializers.CharField(
@@ -21,11 +30,16 @@ class UserSerializer(serializers.ModelSerializer):
     email = serializers.EmailField(max_length=255, min_length=4),
     first_name = serializers.CharField(max_length=255, min_length=2)
     last_name = serializers.CharField(max_length=255, min_length=2)
+    avatar = SerializerMethodField()
+    def get_avatar(self,obj):
+        return'{}{}'.format(settings.CLOUDINARY_ROOT_URL,obj.avatar)
+
 
     class Meta:
         model = User
-        fields = ['id', 'username', 'first_name', 'last_name', 'email', 'password'
+        fields = ['id', 'username', 'avatar', 'first_name', 'last_name', 'email', 'password'
                   ]
+
 
     def validate(self, attrs):
         email = attrs.get('email', '')
@@ -40,11 +54,6 @@ class UserSerializer(serializers.ModelSerializer):
 
 class JourneySerializer(BaseSerializer):
     user_journey = UserSerializer()
-    main_image = SerializerMethodField()
-
-    def get_main_image(self, obj):
-        return obj.main_image.url
-
     class Meta:
         model = Journey
         fields = ['id', 'name', 'main_image', 'tags', 'description', 'user_journey']
@@ -57,11 +66,31 @@ class UpdateJourneySerializer(BaseSerializer):
         fields = ['id', 'name', 'main_image', 'description']
 
 
+class PlaceVisitSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = PlaceVisit
+        fields = '__all__'
+
+
+class ImageJourneySerializer(serializers.ModelSerializer):
+    image = SerializerMethodField()
+    user = UserSerializer()
+
+    def get_image(self, obj):
+        return '{}{}'.format(settings.CLOUDINARY_ROOT_URL, obj.image)
+    class Meta:
+        model = ImageJourney
+        fields = ['id', 'user', 'image','content',  'created_date']
+
+
+class CommentImageJourneySerializer(serializers.ModelSerializer):
+    user= UserSerializer()
+    class Meta:
+        model = CommentImageJourney
+        fields = ['id', 'cmt','user']
 
 class JourneyDetailSerializer(BaseSerializer):
-    main_image = SerializerMethodField()
-    def get_main_image(self, obj):
-        return obj.main_image.url
+
     class Meta:
         model = Journey
         fields = ['id', 'name', 'main_image', 'tags', 'description']
@@ -71,7 +100,7 @@ class JourneyDetailSerializer(BaseSerializer):
 class AddJourneySerializer(serializers.ModelSerializer):
     class Meta:
         model = Journey
-        fields = ['active', 'name', 'description']
+        fields = ['name', 'description']
 
 
 class LoginSerializer(serializers.ModelSerializer):
@@ -101,6 +130,15 @@ class JoinJourneySerializer(serializers.ModelSerializer):
 
 
 class PlaceVisitSerializer(serializers.ModelSerializer):
+    # image = serializers.SerializerMethodField(source='image')
+    # # tags = TagSerializer(many=True)
+    # def get_image(self, placevisit):
+    #
+    #     if placevisit.image:
+    #         request = self.context.get('request')
+    #         if request:
+    #             return request.build_absolute_uri('/static/%s' % placevisit.image.name)
+    #         return '/static/%s' % placevisit.image.name
     class Meta:
         model = PlaceVisit
-        fields = '__all__'
+        fields = ['id', 'image', 'latitude', 'longitude', 'address', 'description']

@@ -69,7 +69,7 @@ MIDDLEWARE = [
 
 ROOT_URLCONF = 'journeyapp.urls'
 JWT_SECRET_KEY = os.environ.get('JWT_SECRET_KEY')
-
+CLOUDINARY_ROOT_URL = 'https://res.cloudinary.com/dxodnq83l/'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',

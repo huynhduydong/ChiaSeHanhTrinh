@@ -13,6 +13,7 @@ import TempScreen from '../components/TempScreen'
 import LoginScreen from '../screens/LoginScreen'
 import UserJourneysScreen from '../screens/JourneyList/UserJourneysScreen'
 import UpdateJourney from '../screens/JourneyList/UpdateJourney'
+import Map from '../components/Map'
 
 /**
  - Call API(Application Programming Interface)
@@ -46,6 +47,8 @@ import UpdateJourney from '../screens/JourneyList/UpdateJourney'
          <Tab.Screen name="Home" component={MainStackNavigator} />
          <Tab.Screen name="AddJourney" component={AddJourney} />
          <Tab.Screen name="UserJourneys" component={UserJourneysScreen} />
+         <Tab.Screen name="Map" component={Map} />
+
        </Tab.Navigator>
      </NavigationContainer>
    );

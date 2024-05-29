@@ -32,10 +32,16 @@ class BaseModel(models.Model):
     class Meta:
         abstract = True
 
+class Tag(BaseModel):
+    name = models.CharField(max_length=50, unique=True)
+
+    def __str__(self):
+        return self.name
+
 
 class Journey(BaseModel):
     name = models.CharField(max_length=150, null=False)
-    main_image = CloudinaryField('main_image', null=True)
+    main_image = models.ImageField(upload_to='journeys/%Y/%m', default=None,null=True)
     description = RichTextField(null=True, default=None)
     user_journey = models.ForeignKey(User, on_delete=models.CASCADE, null=True)
     tags = models.ManyToManyField('Tag')
@@ -51,13 +57,6 @@ class Interaction(BaseModel):
 
     class Meta:
         abstract = True
-
-
-class Tag(BaseModel):
-    name = models.CharField(max_length=50, unique=True)
-
-    def __str__(self):
-        return self.name
 
 
 class Comment(Interaction):
@@ -77,6 +76,17 @@ class Report(BaseModel):
     user = models.ForeignKey(User, on_delete=models.CASCADE, null=False)
 
 
+class ImageJourney(Interaction):
+    image = CloudinaryField('image', null=False)
+    content = models.CharField(max_length=200,null= True)
+
+
+class CommentImageJourney(BaseModel):
+    cmt = models.CharField(max_length=200, null=True)
+    user = models.ForeignKey(User, on_delete=models.CASCADE, null=False)
+    imagejourney = models.ForeignKey(ImageJourney, on_delete=models.CASCADE, related_name='comments', default=1)
+
+
 class PlaceVisit(models.Model):
     latitude = models.DecimalField(max_digits=9, decimal_places=6)
     longitude = models.DecimalField(max_digits=9, decimal_places=6)
@@ -84,7 +94,7 @@ class PlaceVisit(models.Model):
     description = models.TextField(blank=True, null=True)
     timestamp = models.DateTimeField(auto_now_add=True)
     address = models.CharField(max_length=200, blank=True, null=True)
-    image = models.ImageField(upload_to='place_images/', blank=True, null=True)
+    image = models.ImageField(upload_to='place_images/%Y/%m', default=None,null=True)
     journey = models.ForeignKey(Journey, on_delete=models.CASCADE, null=True)
 
     def __str__(self):

@@ -6,24 +6,23 @@ from django.contrib import auth
 from rest_framework.views import APIView
 
 from journeys import serializers, perms
-from journeys.models import Journey, User, Comment, JoinJourney
+from journeys.models import Journey, User, Comment, JoinJourney, PlaceVisit, ImageJourney, CommentImageJourney
 import jwt
 from django.conf import settings
 
-from journeys.serializers import UserSerializer, UpdateJourneySerializer
+from journeys.serializers import UserSerializer, UpdateJourneySerializer, PlaceVisitSerializer, \
+    CommentImageJourneySerializer
 
 
 class JourneyViewSet(viewsets.ViewSet, generics.ListAPIView):
     queryset = Journey.objects.all()
     serializer_class = serializers.JourneySerializer
     # permission_classes = [permissions.AllowAny]
-
     # def get_permissions(self):
     #     if self.action in ['add_comment', 'add_journey']:
     #         return [permissions.IsAuthenticated()]
     #
     #     return self.permission_classes
-
     @action(methods=['post'], detail=False, url_path='addjourney', url_name='add_journey')
     def add_journey(self, request):
         fixed_user = User.objects.get(pk=3)
@@ -49,7 +48,7 @@ class JourneyViewSet(viewsets.ViewSet, generics.ListAPIView):
                 'id': journey.id,
                 'name': journey.name,
                 'created_date': journey.created_date,
-                'main_image': journey.main_image.url,
+                # 'main_image': journey.main_image.url,
                 'updated_date': journey.updated_date,
                 'comments_count': comments_count,
                 'join_count': join_count
@@ -88,6 +87,17 @@ class JourneyDetailViewSet(viewsets.ViewSet, generics.RetrieveAPIView):
             # user = request.user,
             return Response(serializers.JoinJourneySerializer(c).data, status=status.HTTP_201_CREATED)
 
+    @action(methods=['get', 'post'], url_path='image', detail=True)
+    def image(self, request, pk):
+        if request.method == 'GET':
+            image = self.get_object().imagejourney_set.select_related('user').all()
+            return Response(serializers.ImageJourneySerializer(image, many=True).data,
+                            status=status.HTTP_200_OK)
+        elif request.method == 'POST':
+            fixed_user = User.objects.get(pk=3)  # gán cứng user
+            c = ImageJourney.objects.create(user=fixed_user, journey=self.get_object(), image=request.data.get('image'),content=request.data.get('content'))
+            # user = request.user,
+            return Response(serializers.ImageJourneySerializer(c).data, status=status.HTTP_201_CREATED)
 
 
 
@@ -128,37 +138,66 @@ class JoinJourneyRetrieveUpdateDestory(generics.RetrieveUpdateDestroyAPIView):
     serializer_class = serializers.JoinJourneySerializer
     lookup_field = "id"
 
+
+class ImageJourneyDetail(viewsets.ViewSet, generics.RetrieveUpdateDestroyAPIView):
+    # queryset = Journey.objects.all()
+    queryset = ImageJourney.objects.filter(active=True)
+    serializer_class = serializers.ImageJourneySerializer
+    @action(methods=['get', 'post'], url_path='comment', detail=True)
+    def get_comment(self, request, pk):
+        if request.method == 'GET':
+            comments = self.get_object().comments.select_related('user').all()
+            return Response(serializers.CommentImageJourneySerializer(comments, many=True).data,
+                            status=status.HTTP_200_OK)
+        elif request.method == 'POST':
+            fixed_user = User.objects.get(pk=3)  # gán cứng user
+            c = CommentImageJourney.objects.create(user=fixed_user, imagejourney=self.get_object(),cmt=request.data.get('cmt'))
+            # user = request.user,
+            return Response(serializers.CommentImageJourneySerializer(c).data, status=status.HTTP_201_CREATED)
+
+
+
 class CommentRetrieveUpdateDestory(generics.RetrieveUpdateDestroyAPIView):
     queryset = Comment.objects.all()
     serializer_class = serializers.CommentSerializer
     lookup_field = "id"
 
-# class JourneyRetrieveUpdateDestory(generics.UpdateAPIView):
-#     queryset = Journey.objects.all()
-#     serializer_class = serializers.UpdateJourneySerializer
-#     lookup_field = "id"
-#     def partial_update(self, request, *args, **kwargs):
-#         journey = self.get_object()
-#         serializer = serializers.UpdateJourneySerializer(journey, data=request.data)
-#         if serializer.is_valid():
-#             main_image = request.data.get('main_image')
-#             if journey.main_image:
-#                 public_id = journey.main_image.public_id
-#                 cloudinary.uploader.destroy(public_id)
-#             if main_image:
-#                 uploaded_avatar = cloudinary.uploader.upload(main_image, folder=f'user-avt/{journey.id}/',
-#                                                              orverwrite=True)
-#                 journey.main_image = uploaded_avatar['secure_url']
-#                 journey.save()
-#             serializer.save()
-#             return Response(serializer.data)
-#         return Response(serializer.errors, status=400)
+class PlaceVisitViewSet(viewsets.ModelViewSet):
+    queryset = PlaceVisit.objects.all()
+    serializer_class = serializers.PlaceVisitSerializer
+
+    def get_queryset(self):
+        journey_id = self.kwargs['journey_id']
+        return PlaceVisit.objects.filter(journey_id=journey_id)
+
+    def perform_create(self, serializer):
+        journey_id = self.kwargs['journey_id']
+        journey = Journey.objects.get(id=journey_id)
+        serializer.save(journey=journey)
 
 class JourneyRetrieveUpdateDestory(generics.RetrieveUpdateDestroyAPIView):
     queryset = Journey.objects.all()
     serializer_class = serializers.JourneySerializer
     lookup_field = "id"
+    def get_place_visits(self, request, *args, **kwargs):
+        journey = self.get_object()
+        place_visits = PlaceVisit.objects.filter(journey=journey)
+        serializer = PlaceVisitSerializer(place_visits, many=True)
+        return Response(serializer.data)
 
+    def post_place_visit(self, request, *args, **kwargs):
+        journey = self.get_object()
+        serializer = PlaceVisitSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save(journey=journey)
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class PlaceVisitRetrieveUpdateDestory(generics.RetrieveUpdateDestroyAPIView):
+    queryset = PlaceVisit.objects.all()
+    serializer_class = serializers.PlaceVisitSerializer
+    lookup_field = "id"
 class LoginView(generics.GenericAPIView):
     serializer_class = serializers.LoginSerializer
 

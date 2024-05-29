@@ -4,10 +4,10 @@ export const endpoints = {
     journeys:'/journeys/',
     'journeys_detail': (JourneyId) => `/journeys/${JourneyId}`,
     addjourney:'/journeys/addjourney/',
-    'comments': (JourneyId) => `/journeys/${JourneyId}/comments/`,
-    'add_comments': (JourneyId) => `/journeys/${JourneyId}/comments/`,
-    'join_detail': (JourneyId) => `/journeys/${JourneyId}/join/`,
-    'add_join': (JourneyId) => `/journeys/${JourneyId}/join/`,
+    'comments': (JourneyId) => `/journey/${JourneyId}/comments/`,
+    'add_comments': (JourneyId) => `/journey/${JourneyId}/comments/`,
+    'join_detail': (JourneyId) => `/journey/${JourneyId}/join/`,
+    'add_join': (JourneyId) => `/journey/${JourneyId}/join/`,
     'journey_by_user': (userId) => `/journeys/${userId}/journey_by_user/`,
 
 }

@@ -10,6 +10,7 @@
     "test": "jest"
   },
   "dependencies": {
+    "@react-native-async-storage/async-storage": "^1.23.1",
     "@react-navigation/bottom-tabs": "^6.5.20",
     "@react-navigation/native": "^6.1.17",
     "@react-navigation/native-stack": "^6.9.26",
@@ -23,6 +24,7 @@
     "react-native": "^0.74.1",
     "react-native-image-base64": "^0.1.4",
     "react-native-image-crop-picker": "^0.41.1",
+    "react-native-maps": "^1.15.4",
     "react-native-paper": "^5.12.3",
     "react-native-pell-rich-editor": "^1.9.0",
     "react-native-render-html": "^6.3.4",
