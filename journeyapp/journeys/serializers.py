@@ -3,7 +3,8 @@ from rest_framework.fields import SerializerMethodField
 
 import journeys
 from journeyapp import settings
-from journeys.models import Journey, User, Comment, PlaceVisit, Tag, JoinJourney, ImageJourney, CommentImageJourney
+from journeys.models import Journey, User, Comment, PlaceVisit, Tag, JoinJourney, ImageJourney, CommentImageJourney, \
+    Report
 
 
 class TagSerializer(serializers.ModelSerializer):
@@ -127,6 +128,12 @@ class JoinJourneySerializer(serializers.ModelSerializer):
     class Meta:
         model = JoinJourney
         fields = ['id', 'user', 'created_date']
+
+class ReportSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Report
+        fields = ['id', 'reason', 'reported_user', 'reporter', 'created_date', 'active']
+        read_only_fields = ['created_date', 'active']
 
 
 class PlaceVisitSerializer(serializers.ModelSerializer):

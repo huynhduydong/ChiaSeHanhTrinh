@@ -21,4 +21,6 @@ urlpatterns = [
     path('join/<int:id>', views.JoinJourneyRetrieveUpdateDestory.as_view(), name='update_join'),
     path('register', views.RegisterViewSet.as_view()),
     path('login', views.LoginView.as_view()),
+    path('reports/', views.ReportCreateView.as_view(), name='report-create'),
+
 ]

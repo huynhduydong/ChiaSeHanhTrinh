@@ -6,12 +6,12 @@ from django.contrib import auth
 from rest_framework.views import APIView
 
 from journeys import serializers, perms
-from journeys.models import Journey, User, Comment, JoinJourney, PlaceVisit, ImageJourney, CommentImageJourney
+from journeys.models import Journey, User, Comment, JoinJourney, PlaceVisit, ImageJourney, CommentImageJourney, Report
 import jwt
 from django.conf import settings
 
 from journeys.serializers import UserSerializer, UpdateJourneySerializer, PlaceVisitSerializer, \
-    CommentImageJourneySerializer
+    CommentImageJourneySerializer, ReportSerializer
 
 
 class JourneyViewSet(viewsets.ViewSet, generics.ListAPIView):
@@ -198,6 +198,17 @@ class PlaceVisitRetrieveUpdateDestory(generics.RetrieveUpdateDestroyAPIView):
     queryset = PlaceVisit.objects.all()
     serializer_class = serializers.PlaceVisitSerializer
     lookup_field = "id"
+
+
+class ReportCreateView(generics.CreateAPIView):
+    queryset = Report.objects.all()
+    serializer_class = ReportSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def perform_create(self, serializer):
+        serializer.save(reporter=self.request.user)
+
+
 class LoginView(generics.GenericAPIView):
     serializer_class = serializers.LoginSerializer
 
