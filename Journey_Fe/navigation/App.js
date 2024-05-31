@@ -32,7 +32,6 @@ import Map from '../components/Map'
        <Stack.Screen name="JourneyList" component={JourneyList} />
        <Stack.Screen name="AddJourney" component={AddJourney} />
        <Stack.Screen name="TempScreen" component={TempScreen} />
-       <Stack.Screen name="LoginScreen" component={LoginScreen} />
        <Stack.Screen name="UserJourneysScreen" component={UserJourneysScreen} />
        <Stack.Screen name="UpdateJourney" component={UpdateJourney} />
        <Stack.Screen name="JourneyDetail" component={JourneyDetail} />
@@ -48,6 +47,8 @@ import Map from '../components/Map'
          <Tab.Screen name="AddJourney" component={AddJourney} />
          <Tab.Screen name="UserJourneys" component={UserJourneysScreen} />
          <Tab.Screen name="Map" component={Map} />
+         <Tab.Screen name="LoginScreen" component={LoginScreen} />
+
 
        </Tab.Navigator>
      </NavigationContainer>

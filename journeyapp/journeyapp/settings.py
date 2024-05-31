@@ -46,9 +46,15 @@ INSTALLED_APPS = [
     'debug_toolbar',
     'rest_framework',
     'drf_yasg',
+    'oauth2_provider',
+    'corsheaders',
+
 ]
-
-
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': (
+        'oauth2_provider.contrib.rest_framework.OAuth2Authentication',
+    )
+}
 CKEDITOR_UPLOAD_PATH = "ckeditor/images/"
 
 import cloudinary
@@ -65,7 +71,12 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+  'corsheaders.middleware.CorsMiddleware',
 ]
+
+CORS_ALLOW_ALL_ORIGINS = True
+CORS_ORIGIN_ALLOW_ALL = True
+CORS_ALLOW_CREDENTIALS = True
 
 ROOT_URLCONF = 'journeyapp.urls'
 JWT_SECRET_KEY = os.environ.get('JWT_SECRET_KEY')
@@ -144,3 +155,22 @@ STATIC_URL = 'static/'
 # https://docs.djangoproject.com/en/5.0/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+CLIENT_ID = 'Zt56uDnbkkYv1F3JgaoVqyFeMvUEz51jIQdgjdVU'
+CLIENT_SECRET = 'mw0dwwLOX8Gn9ZNjIcW2ligtWJpcSxtacNQ96fszegzEwbgjqKPi7JVkPdyRsDeSid4D45y0GAVd4KaJy340Cx1yrcv85VmVz8zf5qTEeWZnwXAtxHTspGHyEXtIE6LV'
+OAUTH2_PROVIDER = {
+    'ACCESS_TOKEN_EXPIRE_SECONDS': 36000,
+    'AUTHORIZATION_CODE_EXPIRE_SECONDS': 600,
+    'OAUTH2_BACKEND_CLASS': 'oauth2_provider.oauth2_backends.OAuthLibCore',
+    'OAUTH2_VALIDATOR_CLASS': 'oauth2_provider.oauth2_validators.OAuth2Validator',
+    'GRANT_TYPES_SUPPORTED': [
+        'authorization_code',
+        'implicit',
+        'password',
+        'client_credentials',
+    ],
+    'SCOPES': {
+        'read': 'Read scope',
+        'write': 'Write scope',
+        'groups': 'Access to your groups',
+    },
+}

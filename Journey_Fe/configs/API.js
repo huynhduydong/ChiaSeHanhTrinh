@@ -9,21 +9,19 @@ export const endpoints = {
     'join_detail': (JourneyId) => `/journey/${JourneyId}/join/`,
     'add_join': (JourneyId) => `/journey/${JourneyId}/join/`,
     'journey_by_user': (userId) => `/journeys/${userId}/journey_by_user/`,
+    'login': '/o/token/',
+    'current-user': '/users/current/',
+
+
 
 }
 
-export const authAPI = async () => {
-    const token = await AsyncStorage.getItem('accessToken');
-    console.log('Token: ', token);
-
-    return axios.create({
-        baseURL: "http://localhost:8000",
-        headers: {
-            Authorization: `Bearer ${token}`,
-        },
-    });
-};
-
+export const authApi = (accessToken) => axios.create({
+    baseURL: "http://localhost:8000",
+    headers: {
+        "Authorization": `bearer ${accessToken}`
+    }
+})
 export default axios.create({
     baseURL: "http://localhost:8000"
 })

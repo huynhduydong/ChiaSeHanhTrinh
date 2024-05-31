@@ -22,11 +22,11 @@ from rest_framework import permissions
 
 schema_view = get_schema_view(
     openapi.Info(
-        title="Course API",
+        title="Journey API",
         default_version='v1',
-        description="APIs for CourseApp",
-        contact=openapi.Contact(email="thanh.dh@ou.edu.vn"),
-        license=openapi.License(name="Dương Hữu Thành@2021"),
+        description="APIs for JourneyApp",
+        contact=openapi.Contact(email="donghuynh242@gmail.com"),
+        license=openapi.License(name="Huỳnh Duy Đông@2024"),
     ),
     public=True,
     permission_classes=(permissions.AllowAny,),
@@ -34,7 +34,8 @@ schema_view = get_schema_view(
 urlpatterns = [
     path('', include('journeys.urls')),
     path('admin/', admin.site.urls),
-
+    path('o/', include('oauth2_provider.urls',
+                       namespace='oauth2_provider')),
     re_path(r'^ckeditor/', include('ckeditor_uploader.urls')),
     path("__debug__/", include("debug_toolbar.urls")),
     re_path(r'^swagger(?P<format>\.json|\.yaml)$',

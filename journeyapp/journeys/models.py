@@ -26,6 +26,7 @@ class User(AbstractUser):
         return False
 
 
+
 class BaseModel(models.Model):
     created_date = models.DateTimeField(auto_now_add=True)
     updated_date = models.DateTimeField(auto_now=True)
@@ -81,7 +82,6 @@ class Report(models.Model):
     active = models.BooleanField(default=True)
     def __str__(self):
         return f"Report by {self.reporter} on {self.reported_user} for {self.reason}"
-
 
 
 class ImageJourney(Interaction):

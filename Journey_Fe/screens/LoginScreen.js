@@ -8,17 +8,46 @@ import {
   TouchableOpacity,
   StyleSheet,
   Image,
+  ActivityIndicator,
 } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import API, { authApi, endpoints } from '../configs/API';
 
-const LoginScreen = () => {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const navigation = useNavigation();
+const LoginScreen = ({navigation}) => {
+  const [username, setUsername] = useState();
+    const [password, setPassword] = useState();
+  // const navigation = useNavigation();
+  const [loading, setLoading] = useState(false);
 
-  const handleLogin = () => {
+
+  const handleLogin = async  () => {
     // Xử lý logic đăng nhập tại đây
-    console.log('Login:', email, password);
+    setLoading(true);
+
+        try {
+          
+            let res = await API.post(endpoints['login'], {
+                "username": username, 
+                "password": password,
+                "client_id": "NRhtsNVDdFncJIQ8JPR1jyhCNgajxLJKFtDAOleG",
+                "client_secret": "fEIpXZRzXR16HZDBC9gONxe74ayinzwU7dZUUsvt2JUcnsfvU6FX8d3N5ow62RroNPkI6z6auYfo9kcAW8N6EL7KEerqtoVbBJte2lkMVJIdTgKx0mLbylQCtBlI9EtV",
+                "grant_type": "password"
+            });
+
+            await AsyncStorage.setItem("access-token", res.data.access_token)
+            let user = await authApi(res.data.access_token).get(endpoints['current-user']);
+            dispatch({
+                type: "login",
+                payload: user.data
+            });
+            navigation.navigate("Home");
+        } catch (ex) {
+            console.error(ex);
+        } finally {
+            setLoading(false);
+        }
+    console.log('Login:', username, password);
+    console.log(endpoints['login']); // In ra URL để kiểm tra
+
   };
 
   const handleSignUp = () => {
@@ -41,28 +70,16 @@ const LoginScreen = () => {
         style={styles.logo}
       />
       <Text style={styles.title}>Welcome back.</Text>
-      <TextInput
-        style={styles.input}
-        placeholder="Email"
-        value={email}
-        onChangeText={setEmail}
-        keyboardType="email-address"
-        autoCapitalize="none"
-      />
-      <TextInput
-        style={styles.input}
-        placeholder="Password"
-        value={password}
-        onChangeText={setPassword}
-        secureTextEntry
-        autoCapitalize="none"
-      />
+      <TextInput value={username} onChangeText={t => setUsername(t)} style={styles.input} placeholder="Tên đăng nhập..." />
+       <TextInput secureTextEntry={true} value={password} onChangeText={t => setPassword(t)} style={styles.input} placeholder="Mật khẩu..." />
       <TouchableOpacity onPress={handleForgotPassword}>
         <Text style={styles.forgotPassword}>Forgot your password?</Text>
       </TouchableOpacity>
-      <TouchableOpacity style={styles.button} onPress={handleLogin}>
-        <Text style={styles.buttonText}>LOGIN</Text>
-      </TouchableOpacity>
+      {loading===true?<ActivityIndicator />:<>
+                <TouchableOpacity style={styles.button} onPress={handleLogin}>
+                    <Text style={styles.buttonText}>Đăng nhập</Text>
+                </TouchableOpacity>
+            </>}
       <View style={styles.footer}>
         <Text>Don’t have an account? </Text>
         <TouchableOpacity onPress={handleSignUp}>

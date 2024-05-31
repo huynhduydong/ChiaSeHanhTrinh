@@ -27,14 +27,15 @@ class BaseSerializer(serializers.ModelSerializer):
 
 class UserSerializer(serializers.ModelSerializer):
     password = serializers.CharField(
-        max_length=65, min_length=8, write_only=True)
+        max_length=65, write_only=True)
     email = serializers.EmailField(max_length=255, min_length=4),
     first_name = serializers.CharField(max_length=255, min_length=2)
     last_name = serializers.CharField(max_length=255, min_length=2)
     avatar = SerializerMethodField()
     def get_avatar(self,obj):
-        return'{}{}'.format(settings.CLOUDINARY_ROOT_URL,obj.avatar)
-
+        if obj.avatar:
+            return '{}{}'.format(settings.CLOUDINARY_ROOT_URL, obj.avatar)
+        return None
 
     class Meta:
         model = User
@@ -53,6 +54,25 @@ class UserSerializer(serializers.ModelSerializer):
         return User.objects.create_user(**validated_data)
 
 
+class UserRegisterSerializer(serializers.ModelSerializer):
+    password = serializers.CharField(write_only=True)
+
+    class Meta:
+        model = User
+        fields = ['username', 'password', 'email', 'avatar', 'role', 'first_name', 'last_name', 'id']
+
+    def create(self, validated_data):
+        user = User(
+            username=validated_data['username'],
+            email=validated_data['email'],
+            avatar=validated_data['avatar'],
+            role=validated_data['role'],
+            first_name=validated_data['first_name'],
+            last_name=validated_data['last_name']
+        )
+        user.set_password(validated_data['password'])
+        user.save()
+        return user
 class JourneySerializer(BaseSerializer):
     user_journey = UserSerializer()
     class Meta:
@@ -106,7 +126,7 @@ class AddJourneySerializer(serializers.ModelSerializer):
 
 class LoginSerializer(serializers.ModelSerializer):
     password = serializers.CharField(
-        max_length=65, min_length=8, write_only=True)
+        max_length=65, write_only=True)
     username = serializers.CharField(max_length=255, min_length=2)
 
     class Meta:
@@ -120,6 +140,7 @@ class CommentSerializer(serializers.ModelSerializer):
     class Meta:
         model = Comment
         fields = ['id', 'cmt', 'user', 'created_date']
+        # read_only_fields = 'user'
 
 
 class JoinJourneySerializer(serializers.ModelSerializer):
@@ -133,7 +154,7 @@ class ReportSerializer(serializers.ModelSerializer):
     class Meta:
         model = Report
         fields = ['id', 'reason', 'reported_user', 'reporter', 'created_date', 'active']
-        read_only_fields = ['created_date', 'active']
+        read_only_fields = ['reporter', 'created_date', 'active']
 
 
 class PlaceVisitSerializer(serializers.ModelSerializer):
@@ -149,3 +170,33 @@ class PlaceVisitSerializer(serializers.ModelSerializer):
     class Meta:
         model = PlaceVisit
         fields = ['id', 'image', 'latitude', 'longitude', 'address', 'description']
+
+
+
+class ActiveUserSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = ['is_active']
+
+class RefreshTokenSerializer(serializers.Serializer):
+    refresh_token = serializers.CharField()
+
+class ForgotPasswordSerializer(serializers.Serializer):
+    user_identifier = serializers.CharField()
+
+class SendResetPasswordLinkSerializer(serializers.Serializer):
+    email = serializers.EmailField()
+
+class SendOTPSerializer(serializers.Serializer):
+    phone_number = serializers.CharField()
+
+class VerifyOTPSerializer(serializers.Serializer):
+    phone_number = serializers.CharField()
+    otp = serializers.CharField()
+
+class ResetPasswordSerializer(serializers.Serializer):
+    password = serializers.CharField()
+
+class LogoutSerializer(serializers.Serializer):
+    fcm_token = serializers.CharField(required=False, allow_blank=True, allow_null=True)
+    device_type = serializers.CharField(required=False, allow_blank=True, allow_null=True)
