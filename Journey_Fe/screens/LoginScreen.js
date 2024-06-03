@@ -1,6 +1,6 @@
 // src/screens/LoginScreen.js
 
-import React, { useState } from 'react';
+import React, { useContext, useState } from 'react';
 import {
   View,
   Text,
@@ -11,11 +11,15 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import API, { authApi, endpoints } from '../configs/API';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import MyContext, { MyDispatchContext } from '../configs/MyContext';
+import { useNavigation } from '@react-navigation/native';
 
-const LoginScreen = ({navigation}) => {
+const LoginScreen = () => {
   const [username, setUsername] = useState();
-    const [password, setPassword] = useState();
-  // const navigation = useNavigation();
+  const [password, setPassword] = useState();
+  const dispatch = useContext(MyDispatchContext); 
+  const navigation = useNavigation();
   const [loading, setLoading] = useState(false);
 
 
@@ -26,28 +30,30 @@ const LoginScreen = ({navigation}) => {
         try {
           
             let res = await API.post(endpoints['login'], {
-                "username": username, 
+                "username": username,
                 "password": password,
                 "client_id": "NRhtsNVDdFncJIQ8JPR1jyhCNgajxLJKFtDAOleG",
                 "client_secret": "fEIpXZRzXR16HZDBC9gONxe74ayinzwU7dZUUsvt2JUcnsfvU6FX8d3N5ow62RroNPkI6z6auYfo9kcAW8N6EL7KEerqtoVbBJte2lkMVJIdTgKx0mLbylQCtBlI9EtV",
                 "grant_type": "password"
-            });
-
+            }, {
+            headers: {
+                "content-type": "application/x-www-form-urlencoded"
+            }});
+            console.log(res.data.access_token);
             await AsyncStorage.setItem("access-token", res.data.access_token)
-            let user = await authApi(res.data.access_token).get(endpoints['current-user']);
-            dispatch({
-                type: "login",
-                payload: user.data
-            });
-            navigation.navigate("Home");
+            setTimeout(async () => {
+              let user = await authApi(res.data.access_token).get(endpoints['current-user']);
+              dispatch({
+                  type: "login",
+                  payload: user.data
+              });
+              navigation.navigate("Home");
+            },100);
         } catch (ex) {
             console.error(ex);
         } finally {
             setLoading(false);
         }
-    console.log('Login:', username, password);
-    console.log(endpoints['login']); // In ra URL để kiểm tra
-
   };
 
   const handleSignUp = () => {

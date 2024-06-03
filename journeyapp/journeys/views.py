@@ -1,50 +1,56 @@
-import cloudinary
 from django.contrib.auth import authenticate
-from drf_spectacular.utils import extend_schema
-from rest_framework import generics, viewsets, parsers, permissions, status
+from rest_framework import generics, viewsets, permissions, status
 from rest_framework.decorators import action
+from rest_framework.exceptions import PermissionDenied
 from rest_framework.generics import GenericAPIView
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.response import Response
-from django.contrib import auth
 from rest_framework.views import APIView
 from rest_framework.viewsets import ViewSet
+from rest_framework.parsers import MultiPartParser, FormParser
 
 from journeys import serializers, perms
-from journeys.models import Journey, User, Comment, JoinJourney, PlaceVisit, ImageJourney, CommentImageJourney, Report
-import jwt
-from django.conf import settings
-from journeys.serializers import UserSerializer, UpdateJourneySerializer, PlaceVisitSerializer, \
-    CommentImageJourneySerializer, ReportSerializer, LogoutSerializer, ActiveUserSerializer, LoginSerializer, \
-    RefreshTokenSerializer, ForgotPasswordSerializer, SendResetPasswordLinkSerializer, SendOTPSerializer, \
-    ResetPasswordSerializer, UserRegisterSerializer
+from journeys.models import Journey, User, Comment, JoinJourney, PlaceVisit, ImageJourney, CommentImageJourney, Report, \
+    ActivityLog
+
+from journeys.serializers import UserSerializer, PlaceVisitSerializer,ReportSerializer, LoginSerializer, UserRegisterSerializer
+
+
+class AddJourneyViewSet(generics.CreateAPIView):
+    queryset = User.objects.all()
+    serializer_class = serializers.AddJourneySerializer
+    parser_classes = [MultiPartParser, FormParser]
+    permission_classes = [permissions.AllowAny]
+
+    def create(self, request, *args, **kwargs):
+        serializer = serializers.AddJourneySerializer(data=request.data, context={'request': request})
+        if serializer.is_valid():
+            journey = serializer.save()
+            ActivityLog.objects.create(
+                user=request.user,
+                activity_type='create_journey',
+                description=f'Created journey: {journey.name}'
+            )
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
 class JourneyViewSet(viewsets.ViewSet, generics.ListAPIView):
     queryset = Journey.objects.all()
     serializer_class = serializers.JourneySerializer
-    # permission_classes = [permissions.AllowAny]
-    # def get_permissions(self):
-    #     if self.action in ['add_comment', 'add_journey']:
-    #         return [permissions.IsAuthenticated()]
-    #
-    #     return self.permission_classes
-    @action(methods=['post'], detail=False, url_path='addjourney', url_name='add_journey')
-    def add_journey(self, request):
-        fixed_user = User.objects.get(pk=3)
 
-        # Tạo Journey với thông tin người dùng cố định
-        j = Journey.objects.create(
-            name=request.data.get('name'),
-            description=request.data.get('description'),
-            user_journey=fixed_user
-        )
-        if request.method == 'POST':
-            return Response(serializers.AddJourneySerializer(j).data, status=status.HTTP_201_CREATED)
+    def get_permissions(self):
+        if self.action in [ 'journeys']:
+            return [permissions.IsAuthenticated()]
+        return [permissions.AllowAny()]
 
-    @action(url_path='journey_by_user',detail=True, methods=['get'])
-    def journeys(self, request, pk=None):
-        user = User.objects.get(pk=pk)
+    @action(url_path='journey_by_user', detail=False, methods=['get'])
+    def journeys(self, request):
+        if not request.user.is_authenticated:
+            return Response({"detail": "Authentication credentials were not provided."},
+                            status=status.HTTP_401_UNAUTHORIZED)
+
+        user = request.user
         journeys = Journey.objects.filter(user_journey=user)
         data = []
         for journey in journeys:
@@ -54,8 +60,8 @@ class JourneyViewSet(viewsets.ViewSet, generics.ListAPIView):
                 'id': journey.id,
                 'name': journey.name,
                 'created_date': journey.created_date,
-                # 'main_image': journey.main_image.url,
                 'updated_date': journey.updated_date,
+                'main_image': journey.main_image.url,
                 'comments_count': comments_count,
                 'join_count': join_count
             })
@@ -63,49 +69,82 @@ class JourneyViewSet(viewsets.ViewSet, generics.ListAPIView):
 
 
 class JourneyDetailViewSet(viewsets.ViewSet, generics.RetrieveAPIView):
-    # queryset = Journey.objects.all()
     queryset = Journey.objects.prefetch_related('tags').filter(active=True)
-
     serializer_class = serializers.JourneyDetailSerializer
     permission_classes = [permissions.AllowAny]
 
     def get_permissions(self):
-        if self.action in ['get_comments', 'get_join_journey','image']:
+        if self.action in ['get_comments', 'get_join_journey', 'image'] and self.request.method == 'POST':
             return [permissions.IsAuthenticated()]
+        return super().get_permissions()
 
-        return self.permission_classes
     @action(methods=['get', 'post'], url_path='comments', detail=True)
     def get_comments(self, request, pk):
         if request.method == 'GET':
-            comments = self.get_object().comment_set.select_related('user').all()
-            return Response(serializers.CommentSerializer(comments, many=True).data,
-                            status=status.HTTP_200_OK)
+            comments = self.get_object().comment_set.filter(is_deleted=False).select_related('user').all()
+            return Response(serializers.CommentSerializer(comments, many=True).data, status=status.HTTP_200_OK)
         elif request.method == 'POST':
-            # fixed_user = User.objects.get(pk=3)  # gán cứng user
-            c = Comment.objects.create(user = request.user, journey=self.get_object(), cmt=request.data.get('cmt'))
-            # user = request.user,
+            c = Comment.objects.create(user=request.user, journey=self.get_object(), cmt=request.data.get('cmt'))
+
+            # Ghi lại hoạt động thêm bình luận
+            ActivityLog.objects.create(
+                user=request.user,
+                activity_type='add_comment',
+                description=f'Commented on journey {self.get_object().name}: {c.cmt}'
+            )
+
             return Response(serializers.CommentSerializer(c).data, status=status.HTTP_201_CREATED)
 
     @action(methods=['get', 'post'], url_path='join', detail=True)
     def get_join_journey(self, request, pk):
+        journey = self.get_object()
+
         if request.method == 'GET':
-            comments = self.get_object().joinjourney_set.select_related('user').all()
-            return Response(serializers.JoinJourneySerializer(comments, many=True).data,
-                            status=status.HTTP_200_OK)
+            join_requests = journey.joinjourney_set.select_related('user').all()
+            return Response(serializers.JoinJourneySerializer(join_requests, many=True).data, status=status.HTTP_200_OK)
+
         elif request.method == 'POST':
-            c = JoinJourney.objects.create(user = request.user, journey=self.get_object())
+            if journey.user_journey != request.user:
+                return Response({'detail': 'Chỉ chủ sở hữu của hành trình mới có thể duyệt yêu cầu tham gia.'},
+                                status=status.HTTP_403_FORBIDDEN)
+
+            user_id = request.data.get('user_id')
+            if not user_id:
+                return Response({'detail': 'user_id là bắt buộc.'}, status=status.HTTP_400_BAD_REQUEST)
+
+            user_to_join = User.objects.get(pk=user_id)
+            c = JoinJourney.objects.create(user=user_to_join, journey=journey)
+
+            ActivityLog.objects.create(
+                user=request.user,
+                activity_type='join_journey',
+                description=f'Duyệt cho {user_to_join.username} tham gia hành trình {journey.name}'
+            )
+
             return Response(serializers.JoinJourneySerializer(c).data, status=status.HTTP_201_CREATED)
 
     @action(methods=['get', 'post'], url_path='image', detail=True)
     def image(self, request, pk):
+        journey = self.get_object()
+
         if request.method == 'GET':
             image = self.get_object().imagejourney_set.select_related('user').all()
-            return Response(serializers.ImageJourneySerializer(image, many=True).data,
-                            status=status.HTTP_200_OK)
+            return Response(serializers.ImageJourneySerializer(image, many=True).data, status=status.HTTP_200_OK)
         elif request.method == 'POST':
-            c = ImageJourney.objects.create(user = request.user, journey=self.get_object(), image=request.data.get('image'),content=request.data.get('content'))
-            return Response(serializers.ImageJourneySerializer(c).data, status=status.HTTP_201_CREATED)
+            if journey.user_journey != request.user and not journey.joinjourney_set.filter(user=request.user).exists():
+                return Response({
+                                    'detail': 'Chỉ chủ sở hữu hoặc người đã được chấp nhận tham gia hành trình mới có thể thêm hình ảnh.'},
+                                status=status.HTTP_403_FORBIDDEN)
+            c = ImageJourney.objects.create(user=request.user, journey=self.get_object(),
+                                            image=request.data.get('image'), content=request.data.get('content'))
 
+            ActivityLog.objects.create(
+                user=request.user,
+                activity_type='add_image',
+                description=f'Added image to journey {journey.name}'
+            )
+
+            return Response(serializers.ImageJourneySerializer(c).data, status=status.HTTP_201_CREATED)
 
 
 class UserViewSet(ViewSet, GenericAPIView):
@@ -114,10 +153,10 @@ class UserViewSet(ViewSet, GenericAPIView):
 
     def get_queryset(self):
         return User.objects.all()
+
     def get_permissions(self):
         if self.action.__eq__('current_user'):
             return [permissions.IsAuthenticated()]
-
         return [permissions.AllowAny()]
 
     @action(detail=True, methods=['patch'], permission_classes=[permissions.IsAuthenticated])
@@ -130,15 +169,9 @@ class UserViewSet(ViewSet, GenericAPIView):
         except User.DoesNotExist:
             return Response({'error': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
 
-    @action(methods=["get"], url_path="current", detail=False, serializer_class=UserSerializer)
-    def get_current_user(self, request):
-        user = request.user
-        if request.method.__eq__('PATCH'):
-            for k, v in request.data.items():
-                setattr(user, k, v)
-            user.save()
-
-        return Response(serializers.UserSerializer(user).data)
+    @action(methods=['get'], url_path='current-user', url_name='current-user', detail=False)
+    def current_user(self, request):
+        return Response(UserSerializer(request.user).data)
 
     @action(methods=["post"], url_path="login", detail=False, permission_classes=[AllowAny],
             serializer_class=LoginSerializer)
@@ -148,67 +181,34 @@ class UserViewSet(ViewSet, GenericAPIView):
         user = authenticate(username=serializer.validated_data['username'],
                             password=serializer.validated_data['password'])
         if user:
+            # Ghi lại hoạt động đăng nhập
+            ActivityLog.objects.create(
+                user=user,
+                activity_type='login',
+                description='User logged in'
+            )
             return Response(UserSerializer(user).data, status=status.HTTP_200_OK)
         return Response("Invalid credentials", status=status.HTTP_401_UNAUTHORIZED)
 
-    @action(methods=["post"], url_path="refresh-token", detail=False, permission_classes=[AllowAny],
-            serializer_class=RefreshTokenSerializer)
-    def refresh_token(self, request):
-        # Implement refresh token logic here
-        pass
-
-    @action(methods=["post"], url_path="forgot-password", detail=False, permission_classes=[AllowAny],
-            serializer_class=ForgotPasswordSerializer)
-    def forgot_password(self, request):
-        serializer = self.serializer_class(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        # Implement forgot password logic here
-        pass
-
-    @action(methods=["post"], url_path="email", detail=False, permission_classes=[AllowAny],
-            serializer_class=SendResetPasswordLinkSerializer)
-    def send_reset_password_link(self, request):
-        serializer = self.serializer_class(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        # Implement send reset password link logic here
-        pass
-
-    @action(methods=["get", "post"], url_path="password", detail=False, permission_classes=[AllowAny],
-            serializer_class=ResetPasswordSerializer)
-    def reset_password(self, request):
-        if request.method == "GET":
-            return self.get_reset_password_form(request)
-        elif request.method == "POST":
-            return self.post_reset_password(request)
-
-    def get_reset_password_form(self, request):
-        # Implement get reset password form logic here
-        pass
-
-    def post_reset_password(self, request):
-        serializer = self.serializer_class(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        # Implement post reset password logic here
-        pass
-
-    @action(methods=["post"], url_path="logout", detail=False, permission_classes=[IsAuthenticated],
-            serializer_class=LogoutSerializer)
-    def logout(self, request):
-        serializer = self.serializer_class(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        # Implement logout logic here
-        pass
+    @action(detail=False, methods=['get'], permission_classes=[IsAuthenticated])
+    def activity_log(self, request):
+        user = request.user
+        activities = ActivityLog.objects.filter(user=user).order_by('-timestamp')
+        serializer = serializers.ActivityLogSerializer(activities, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
 
 class UserRegisterView(generics.CreateAPIView):
     queryset = User.objects.all()
     serializer_class = UserRegisterSerializer
     permission_classes = [permissions.AllowAny]
+
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         self.perform_create(serializer)
         headers = self.get_success_headers(serializer.data)
+
         return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
 
 
@@ -225,7 +225,6 @@ class JoinJourneyRetrieveUpdateDestory(generics.RetrieveUpdateDestroyAPIView):
 
 
 class ImageJourneyDetail(viewsets.ViewSet, generics.RetrieveUpdateDestroyAPIView):
-    # queryset = Journey.objects.all()
     queryset = ImageJourney.objects.filter(active=True)
     serializer_class = serializers.ImageJourneySerializer
     permission_classes = [permissions.AllowAny]
@@ -233,8 +232,8 @@ class ImageJourneyDetail(viewsets.ViewSet, generics.RetrieveUpdateDestroyAPIView
     def get_permissions(self):
         if self.action in ['get_comment']:
             return [permissions.IsAuthenticated()]
-
         return self.permission_classes
+
     @action(methods=['get', 'post'], url_path='comment', detail=True)
     def get_comment(self, request, pk):
         if request.method == 'GET':
@@ -242,15 +241,58 @@ class ImageJourneyDetail(viewsets.ViewSet, generics.RetrieveUpdateDestroyAPIView
             return Response(serializers.CommentImageJourneySerializer(comments, many=True).data,
                             status=status.HTTP_200_OK)
         elif request.method == 'POST':
-            c = CommentImageJourney.objects.create(user=request.user, imagejourney=self.get_object(),cmt=request.data.get('cmt'))
+            c = CommentImageJourney.objects.create(user=request.user, imagejourney=self.get_object(),
+                                                   cmt=request.data.get('cmt'))
+
+            # Ghi lại hoạt động thêm bình luận vào hình ảnh
+            ActivityLog.objects.create(
+                user=request.user,
+                activity_type='add_image_comment',
+                description=f'Commented on image in journey {self.get_object().journey.name}'
+            )
+
             return Response(serializers.CommentImageJourneySerializer(c).data, status=status.HTTP_201_CREATED)
 
+
+class IsOwnerOrJourneyOwnerOrReadOnly(permissions.BasePermission):
+    def has_object_permission(self, request, view, obj):
+        if request.method in permissions.SAFE_METHODS:
+            return True
+        return obj.user == request.user or obj.journey.user_journey == request.user
 
 
 class CommentRetrieveUpdateDestory(generics.RetrieveUpdateDestroyAPIView):
     queryset = Comment.objects.all()
     serializer_class = serializers.CommentSerializer
     lookup_field = "id"
+    permission_classes = [IsOwnerOrJourneyOwnerOrReadOnly]
+    def perform_update(self, serializer):
+        # Kiểm tra nếu user hiện tại là chủ sở hữu của bình luận
+        comment = self.get_object()
+        if comment.user != self.request.user:
+            raise PermissionDenied("Bạn không có quyền cập nhật bình luận này.")
+        serializer.save()
+
+    def perform_destroy(self, instance):
+        if instance.user != self.request.user and instance.journey.user_journey != self.request.user:
+            raise PermissionDenied("Bạn không có quyền xóa bình luận này.")
+        instance.is_deleted = True
+        instance.save()
+        ActivityLog.objects.create(
+            user=self.request.user,
+            activity_type='delete_comment',
+            description=f'Deleted comment: {instance.cmt}'
+        )
+
+class AddPlaceVisitView(APIView):
+
+    def post(self, request, *args, **kwargs):
+        serializer = PlaceVisitSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save(journey_id=kwargs['journey_id'])
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
 
 class PlaceVisitViewSet(viewsets.ModelViewSet):
     queryset = PlaceVisit.objects.all()
@@ -265,10 +307,19 @@ class PlaceVisitViewSet(viewsets.ModelViewSet):
         journey = Journey.objects.get(id=journey_id)
         serializer.save(journey=journey)
 
+        # Ghi lại hoạt động thêm điểm đến
+        ActivityLog.objects.create(
+            user=self.request.user,
+            activity_type='add_place_visit',
+            description=f'Added place visit to journey: {journey.name}'
+        )
+
+
 class JourneyRetrieveUpdateDestory(generics.RetrieveUpdateDestroyAPIView):
     queryset = Journey.objects.all()
     serializer_class = serializers.JourneySerializer
     lookup_field = "id"
+
     def get_place_visits(self, request, *args, **kwargs):
         journey = self.get_object()
         place_visits = PlaceVisit.objects.filter(journey=journey)
@@ -298,25 +349,9 @@ class ReportCreateView(generics.CreateAPIView):
     def perform_create(self, serializer):
         serializer.save(reporter=self.request.user)
 
-
-
-# class LoginView(generics.GenericAPIView):
-#     serializer_class = serializers.LoginSerializer
-#
-#
-#     def post(self, request):
-#         data = request.data
-#         username = data.get('username', '')
-#         password = data.get('password', '')
-#         user = auth.authenticate(username=username, password=password)
-#         if user:
-#             auth_token = jwt.encode(
-#                 {'username': user.username}, settings.JWT_SECRET_KEY, algorithm="HS256")
-#
-#             serializer = UserSerializer(user)
-#
-#             data = {'user': serializer.data, 'token': auth_token}
-#
-#             return Response(data, status=status.HTTP_200_OK)
-#
-#         return Response({'detail': 'Invalid credentials'}, status=status.HTTP_401_UNAUTHORIZED)
+        # Ghi lại hoạt động báo cáo
+        ActivityLog.objects.create(
+            user=self.request.user,
+            activity_type='create_report',
+            description=f'Reported journey: {serializer.validated_data["journey"].name}'
+        )

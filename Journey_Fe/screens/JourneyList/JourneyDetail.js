@@ -9,10 +9,11 @@ import {
   Dimensions,
 } from 'react-native';
 import { Button, Card, Chip, TextInput } from 'react-native-paper';
-import API, { endpoints } from '../../configs/API';
+import API, { authApi, endpoints } from '../../configs/API';
 import HTML from 'react-native-render-html';
 import moment from 'moment';
 import { isCloseToBottom } from '../../utils/Utils';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const defaultAvatar = 'https://scontent.fsgn2-6.fna.fbcdn.net/v/t39.30808-6/409808276_2136446710040143_4957388703891454700_n.jpg?_nc_cat=111&ccb=1-7&_nc_sid=5f2048&_nc_eui2=AeGkRobaUFCGL3eLId4b6Mo_FZp0t1X6XFEVmnS3VfpcUWxNFPmslVUO3TRGkc05PGgn_12pb6IiEk8-8npqV_Qg&_nc_ohc=A8Cm3wnYWO0Q7kNvgFdK7Bx&_nc_ht=scontent.fsgn2-6.fna&oh=00_AYCHjKcBQtDZFiQ-uK1k0af2gIle8_nT1J1ETxkMrKffzQ&oe=664AA66B';
 
@@ -21,6 +22,10 @@ const JourneyDetail = ({ route }) => {
   const { JourneyId } = route.params;
   const [comments, setComments] = useState([]);
   const [content, setContent] = useState("");
+  const [placeVisits, setPlaceVisit] = useState([]);
+  const [images,setImage] = useState([]);
+
+
   const [joinJourneys, setJoinJourneys] = useState([]);
 
   useEffect(() => {
@@ -34,10 +39,33 @@ const JourneyDetail = ({ route }) => {
     };
     loadComments();
   }, [JourneyId]);
+  useEffect(() => {
+    const loadImage = async () => {
+      try {
+        let res = await API.get(endpoints['image_journey'](JourneyId));
+        setImage(res.data);
+      } catch (ex) {
+        console.error(ex);
+      }
+    };
+    loadImage();
+  }, [JourneyId]);
+  useEffect(() => {
+    const loadPlaceVisits = async () => {
+      try {
+        let res = await API.get(endpoints['place_visits'](JourneyId));
+        setPlaceVisit(res.data);
+      } catch (ex) {
+        console.error(ex);
+      }
+    };
+    loadPlaceVisits();
+  }, [JourneyId]);
 
   useEffect(() => {
     const loadJoinJourneys = async () => {
       try {
+        
         let res = await API.get(endpoints['join_detail'](JourneyId));
         setJoinJourneys(res.data);
       } catch (ex) {
@@ -67,7 +95,9 @@ const JourneyDetail = ({ route }) => {
 
   const addComment = async () => {
     try {
-      let res = await API.post(endpoints['comments'](JourneyId), {
+      let token = await AsyncStorage.getItem('access-token');
+
+      let res = await authApi(token).post(endpoints['comments'](JourneyId), {
         'cmt': content,
       });
       setComments(current => [res.data, ...current]);
@@ -78,7 +108,9 @@ const JourneyDetail = ({ route }) => {
 
   const acceptJoinRequest = async (userId) => {
     try {
-      await API.post(endpoints['add_join'](JourneyId));
+      let token = await AsyncStorage.getItem('access-token');
+
+      let res = await authApi(token).post(endpoints['add_join'](JourneyId),{ user_id: userId });
       setJoinJourneys(current => [...current, { user: { id: userId } }]);
     } catch (ex) {
       console.error(ex);
@@ -109,7 +141,41 @@ const JourneyDetail = ({ route }) => {
             </View>
           )}
           <HTML contentWidth={Dimensions.get('window').width} source={{ html: journey.description }} />
+          <View style={styles.placeVisitsContainer}>
+            {placeVisits.length > 0 ? (
+              placeVisits.map(placeVisit => (
+                <Card key={placeVisit.id} style={styles.placeVisitCard}>
+                  <Card.Content>
+                    <Text style={styles.placeVisitName}>{placeVisit.name}</Text>
+                    <Text style={styles.placeVisitDescription}>{placeVisit.description}</Text>
+                    <Text style={styles.placeVisitLocation}>Location: {placeVisit.latitude}, {placeVisit.longitude}</Text>
+                    <Text style={styles.placeVisitAddress}>Address: {placeVisit.address}</Text>
+                  </Card.Content>
+                </Card>
+              ))
+            ) : (
+              <Text style={styles.noPlaceVisits}>No place visits available.</Text>
+            )}
+          </View>
+          <View>
+          {images.length > 0 ? (
+              images.map(image => (
+                <Card key={image.id} style={styles.placeVisitCard}>
+                  <Card.Content>
+                    <Text style={styles.placeVisitName}>{image.content}</Text>
+                    <Image
+                source={{ uri: image.image }}
+                style={styles.avatar}
+              />
+                  </Card.Content>
+                </Card>
+              ))
+            ) : (
+              <Text style={styles.noPlaceVisits}>No Image available.</Text>
+            )}
+          </View>
         </Card.Content>
+        
       </Card>
       <View style={styles.commentSection}>
         <TextInput
@@ -242,6 +308,28 @@ const styles = StyleSheet.create({
   acceptedChip: {
     marginTop: 10,
     backgroundColor: '#4CAF50',
+  },
+  placeVisitsContainer: {
+    marginTop: 20,
+  },
+  placeVisitCard: {
+    marginBottom: 10,
+  },
+  placeVisitName: {
+    fontSize: 18,
+    fontWeight: 'bold',
+  },
+  placeVisitDescription: {
+    fontSize: 14,
+    color: '#555',
+  },
+  placeVisitLocation: {
+    fontSize: 12,
+    color: '#333',
+  },
+  placeVisitAddress: {
+    fontSize: 12,
+    color: '#333',
   },
 });
 

@@ -1,12 +1,13 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { View, StyleSheet, TextInput, Button, Text } from 'react-native';
 import { WebView } from 'react-native-webview';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-const Map = () => {
-  const [query, setQuery] = useState('xã tam hiệp huyện núi thành tỉnh quảng nam');
-  const [location, setLocation] = useState({ lat: 15.4234, lon: 108.7996 });
+const Map = ({ initialQuery = 'Hà Nội', initialLocation = { lat: 21.0283334, lon: 105.854041 }, onLocationFound }) => {
+  const [query, setQuery] = useState(initialQuery);
+  const [location, setLocation] = useState(initialLocation);
   const [address, setAddress] = useState('');
+  const debounceTimeout = useRef(null);
 
   const searchLocation = async () => {
     try {
@@ -16,11 +17,19 @@ const Map = () => {
         const lat = parseFloat(data[0].lat);
         const lon = parseFloat(data[0].lon);
         const addr = data[0].display_name;
-        setLocation({ lat, lon });
+        const newLocation = { lat, lon };
+
+        setLocation(newLocation);
         setAddress(addr);
         
         // Lưu vào AsyncStorage
         await AsyncStorage.setItem('location', JSON.stringify({ lat, lon, address: addr }));
+
+        if (onLocationFound) {
+          onLocationFound(newLocation, addr);
+        }
+      } else {
+        console.log('No results found');
       }
     } catch (error) {
       console.error(error);
@@ -44,66 +53,48 @@ const Map = () => {
     loadLocation();
   }, []);
 
-  const html = `
-    <!DOCTYPE html>
-    <html>
-    <head>
-      <title>Leaflet Map</title>
-      <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
-      <style>
-        #map {
-          width: 100%;
-          height: 100%;
-          position: absolute;
-        }
-      </style>
-    </head>
-    <body>
-      <div id="map"></div>
-      <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
-      <script>
-        var map = L.map('map').setView([${location.lat}, ${location.lon}], 13);
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-          attribution: '© OpenStreetMap contributors'
-        }).addTo(map);
-        L.marker([${location.lat}, ${location.lon}]).addTo(map)
-          .bindPopup('${query}')
-          .openPopup();
-      </script>
-    </body>
-    </html>
-  `;
+  useEffect(() => {
+    if (debounceTimeout.current) {
+      clearTimeout(debounceTimeout.current);
+    }
+
+    debounceTimeout.current = setTimeout(() => {
+      searchLocation();
+    }, 2000);
+
+    return () => {
+      if (debounceTimeout.current) {
+        clearTimeout(debounceTimeout.current);
+      }
+    };
+  }, [query]);
 
   return (
-    <View style={styles.container}>
+    <View style={styles.mapContainer}>
       <TextInput
         style={styles.input}
         value={query}
         onChangeText={setQuery}
       />
-      <Button
-        title="Search"
-        onPress={searchLocation}
-      />
-      <WebView
-        originWhitelist={['*']}
-        source={{ html }}
-        style={styles.webview}
-      />
+  
       <View style={styles.infoContainer}>
         <Text>Latitude: {location.lat}</Text>
         <Text>Longitude: {location.lon}</Text>
         <Text>Address: {address}</Text>
       </View>
+      <Button
+        title="Confirm"
+        onPress={() => console.log("Location Confirmed:", location)}
+      />
     </View>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
+  mapContainer: {
     flex: 1,
     padding: 10,
+    height: 500,
   },
   input: {
     height: 40,
@@ -113,7 +104,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
   },
   webview: {
-    flex: 1,
+    height: 400,
   },
   infoContainer: {
     marginTop: 10,

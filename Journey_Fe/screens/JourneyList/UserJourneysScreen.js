@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, FlatList, StyleSheet, Image, TouchableOpacity } from 'react-native';
 import { Card, Button } from 'react-native-paper';
-import API, { endpoints } from '../../configs/API';
+import API, { authApi, endpoints } from '../../configs/API';
 import moment from 'moment';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const UserJourneysScreen = ({ route, navigation }) => {
     // const { userId } = route.params;
@@ -16,7 +17,9 @@ const UserJourneysScreen = ({ route, navigation }) => {
     useEffect(() => {
         const loadJourneys = async () => {
             try {
-                const res = await API.get(endpoints['journey_by_user'](3));
+              let token = await AsyncStorage.getItem('access-token');
+
+              let res = await authApi(token).get(endpoints['journey_by_user']);
 
                 setJourneys(res.data);
             } catch (error) {
@@ -32,7 +35,7 @@ const UserJourneysScreen = ({ route, navigation }) => {
             <Card style={styles.card}>
                 <Card.Content style={styles.cardContent}>
                     <Image
-                        source={{ uri: item.main_image || defaultAvatar }}
+                        source={{ uri: "http://localhost:8000/static"+item.main_image || defaultAvatar }}
                         style={styles.image}
                     />
                     <View style={styles.textContainer}>
