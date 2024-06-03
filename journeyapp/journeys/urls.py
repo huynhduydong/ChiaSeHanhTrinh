@@ -20,6 +20,9 @@ urlpatterns = [
     path('place_visit/<int:id>', views.PlaceVisitRetrieveUpdateDestory.as_view(), name='update_place_visit'),
     path('join/<int:id>', views.JoinJourneyRetrieveUpdateDestory.as_view(), name='update_join'),
     path('register', views.UserRegisterView.as_view()),
+    path('add_journey/', views.AddJourneyViewSet.as_view(),name='add-journey'),
+    path('add_journey/<int:journey_id>/add_place_visit/', views.AddPlaceVisitView.as_view(), name='add_place_visit'),
+
     path('reports/', views.ReportCreateView.as_view(), name='report-create'),
 
 ]

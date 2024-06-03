@@ -4,7 +4,7 @@ from rest_framework.fields import SerializerMethodField
 import journeys
 from journeyapp import settings
 from journeys.models import Journey, User, Comment, PlaceVisit, Tag, JoinJourney, ImageJourney, CommentImageJourney, \
-    Report
+    Report, ActivityLog
 
 
 class TagSerializer(serializers.ModelSerializer):
@@ -80,6 +80,22 @@ class JourneySerializer(BaseSerializer):
         fields = ['id', 'name', 'main_image', 'tags', 'description', 'user_journey']
 
 
+class AddJourneySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Journey
+        fields = ['id', 'name', 'description', 'main_image']
+    def create(self, validated_data):
+        request = self.context.get('request', None)
+        user = request.user if request else None
+        return Journey.objects.create(user_journey=user, **validated_data)
+
+
+class PlaceVisitSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = PlaceVisit
+        fields = ['latitude', 'longitude', 'name', 'description', 'address', 'image']
+
+
 class UpdateJourneySerializer(BaseSerializer):
 
     class Meta:
@@ -118,12 +134,6 @@ class JourneyDetailSerializer(BaseSerializer):
 
 
 
-class AddJourneySerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Journey
-        fields = ['name', 'description']
-
-
 class LoginSerializer(serializers.ModelSerializer):
     password = serializers.CharField(
         max_length=65, write_only=True)
@@ -142,6 +152,10 @@ class CommentSerializer(serializers.ModelSerializer):
         fields = ['id', 'cmt', 'user', 'created_date']
         # read_only_fields = 'user'
 
+class ActivityLogSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ActivityLog
+        fields = ['activity_type', 'description', 'timestamp']
 
 class JoinJourneySerializer(serializers.ModelSerializer):
     user = UserSerializer()
@@ -150,27 +164,12 @@ class JoinJourneySerializer(serializers.ModelSerializer):
         model = JoinJourney
         fields = ['id', 'user', 'created_date']
 
+
 class ReportSerializer(serializers.ModelSerializer):
     class Meta:
         model = Report
         fields = ['id', 'reason', 'reported_user', 'reporter', 'created_date', 'active']
         read_only_fields = ['reporter', 'created_date', 'active']
-
-
-class PlaceVisitSerializer(serializers.ModelSerializer):
-    # image = serializers.SerializerMethodField(source='image')
-    # # tags = TagSerializer(many=True)
-    # def get_image(self, placevisit):
-    #
-    #     if placevisit.image:
-    #         request = self.context.get('request')
-    #         if request:
-    #             return request.build_absolute_uri('/static/%s' % placevisit.image.name)
-    #         return '/static/%s' % placevisit.image.name
-    class Meta:
-        model = PlaceVisit
-        fields = ['id', 'image', 'latitude', 'longitude', 'address', 'description']
-
 
 
 class ActiveUserSerializer(serializers.ModelSerializer):

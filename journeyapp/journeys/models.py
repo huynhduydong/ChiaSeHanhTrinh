@@ -64,6 +64,8 @@ class Interaction(BaseModel):
 
 class Comment(Interaction):
     cmt = models.CharField(max_length=200, null=False)
+    is_deleted = models.BooleanField(default=False)  # Thêm trường này
+
 
 
 class JoinJourney(Interaction):
@@ -107,3 +109,13 @@ class PlaceVisit(models.Model):
 
     def __str__(self):
         return self.name if self.name else f'Place at ({self.latitude}, {self.longitude})'
+
+
+class ActivityLog(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    activity_type = models.CharField(max_length=100)
+    description = models.TextField()
+    timestamp = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f'{self.user.username} - {self.activity_type} at {self.timestamp}'

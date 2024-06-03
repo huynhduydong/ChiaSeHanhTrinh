@@ -71,7 +71,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-  'corsheaders.middleware.CorsMiddleware',
+    'corsheaders.middleware.CorsMiddleware',
 ]
 
 CORS_ALLOW_ALL_ORIGINS = True
@@ -155,8 +155,8 @@ STATIC_URL = 'static/'
 # https://docs.djangoproject.com/en/5.0/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
-CLIENT_ID = 'Zt56uDnbkkYv1F3JgaoVqyFeMvUEz51jIQdgjdVU'
-CLIENT_SECRET = 'mw0dwwLOX8Gn9ZNjIcW2ligtWJpcSxtacNQ96fszegzEwbgjqKPi7JVkPdyRsDeSid4D45y0GAVd4KaJy340Cx1yrcv85VmVz8zf5qTEeWZnwXAtxHTspGHyEXtIE6LV'
+CLIENT_ID = 'NRhtsNVDdFncJIQ8JPR1jyhCNgajxLJKFtDAOleG'
+CLIENT_SECRET = 'fEIpXZRzXR16HZDBC9gONxe74ayinzwU7dZUUsvt2JUcnsfvU6FX8d3N5ow62RroNPkI6z6auYfo9kcAW8N6EL7KEerqtoVbBJte2lkMVJIdTgKx0mLbylQCtBlI9EtV'
 OAUTH2_PROVIDER = {
     'ACCESS_TOKEN_EXPIRE_SECONDS': 36000,
     'AUTHORIZATION_CODE_EXPIRE_SECONDS': 600,
