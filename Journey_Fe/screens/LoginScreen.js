@@ -30,8 +30,8 @@ const LoginScreen = () => {
         try {
           
             let res = await API.post(endpoints['login'], {
-                "username": username,
-                "password": password,
+                "username": "duydong",
+                "password": "dong",
                 "client_id": "NRhtsNVDdFncJIQ8JPR1jyhCNgajxLJKFtDAOleG",
                 "client_secret": "fEIpXZRzXR16HZDBC9gONxe74ayinzwU7dZUUsvt2JUcnsfvU6FX8d3N5ow62RroNPkI6z6auYfo9kcAW8N6EL7KEerqtoVbBJte2lkMVJIdTgKx0mLbylQCtBlI9EtV",
                 "grant_type": "password"
