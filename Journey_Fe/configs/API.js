@@ -11,15 +11,20 @@ export const endpoints = {
     'image_journey': (JourneyId) => `/journey/${JourneyId}/image/`,
 
     'add_join': (JourneyId) => `/journey/${JourneyId}/join/`,
+    'complete': (JourneyId) => `/journey/${JourneyId}/complete/`,
+    'close_comments': (JourneyId) => `/journey/${JourneyId}/close_comments/`,
+
+
     'place_visits': (JourneyId) => `/journeys/${JourneyId}/place_visits/`,
 
     journey_by_user : `/journeys/journey_by_user/`,
     'login': '/o/token/',
+    'register': '/register',
+    'reports': '/reports/',
+    'current_user_profile': '/user/current_user_profile/',
+
     'current-user': '/user/current-user/',
-
-
-
-
+    'profile_user':(userId)=>`/user/${userId}/profile_user/`,
 }
 
 export const authApi = (accessToken) => axios.create({

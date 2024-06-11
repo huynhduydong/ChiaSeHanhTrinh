@@ -23,42 +23,47 @@ const LoginScreen = () => {
   const [loading, setLoading] = useState(false);
 
 
-  const handleLogin = async  () => {
-    // Xử lý logic đăng nhập tại đây
+  const handleLogin = async () => {
     setLoading(true);
-
-        try {
-          
-            let res = await API.post(endpoints['login'], {
-                "username": "duydong",
-                "password": "dong",
-                "client_id": "NRhtsNVDdFncJIQ8JPR1jyhCNgajxLJKFtDAOleG",
-                "client_secret": "fEIpXZRzXR16HZDBC9gONxe74ayinzwU7dZUUsvt2JUcnsfvU6FX8d3N5ow62RroNPkI6z6auYfo9kcAW8N6EL7KEerqtoVbBJte2lkMVJIdTgKx0mLbylQCtBlI9EtV",
-                "grant_type": "password"
-            }, {
-            headers: {
-                "content-type": "application/x-www-form-urlencoded"
-            }});
-            console.log(res.data.access_token);
-            await AsyncStorage.setItem("access-token", res.data.access_token)
-            setTimeout(async () => {
-              let user = await authApi(res.data.access_token).get(endpoints['current-user']);
-              dispatch({
-                  type: "login",
-                  payload: user.data
-              });
-              navigation.navigate("Home");
-            },100);
-        } catch (ex) {
-            console.error(ex);
-        } finally {
-            setLoading(false);
+  
+    try {
+      let res = await API.post(endpoints['login'], {
+        "username": "duydong",
+        "password": "dong",
+        "client_id": "NRhtsNVDdFncJIQ8JPR1jyhCNgajxLJKFtDAOleG",
+        "client_secret": "fEIpXZRzXR16HZDBC9gONxe74ayinzwU7dZUUsvt2JUcnsfvU6FX8d3N5ow62RroNPkI6z6auYfo9kcAW8N6EL7KEerqtoVbBJte2lkMVJIdTgKx0mLbylQCtBlI9EtV",
+        "grant_type": "password"
+      }, {
+        headers: {
+          "content-type": "application/x-www-form-urlencoded"
         }
+      });
+      console.log(res.data.access_token);
+      await AsyncStorage.setItem("access-token", res.data.access_token);
+  
+      // Gọi API để lấy thông tin người dùng
+      let userRes = await authApi(res.data.access_token).get(endpoints['current-user']);
+  
+      // Lưu thông tin người dùng vào AsyncStorage
+      await AsyncStorage.setItem('user', JSON.stringify(userRes.data));
+  
+      dispatch({
+        type: "login",
+        payload: userRes.data
+      });
+  
+      navigation.navigate("Home");
+    } catch (ex) {
+      console.error(ex);
+    } finally {
+      setLoading(false);
+    }
   };
+  
 
   const handleSignUp = () => {
     // Điều hướng tới màn hình đăng ký
-    navigation.navigate('SignUp');
+    navigation.navigate('Register');
   };
 
   const handleForgotPassword = () => {
@@ -72,7 +77,7 @@ const LoginScreen = () => {
         <Text style={styles.backButtonText}>{'<'}</Text>
       </TouchableOpacity>
       <Image
-        source={{ uri: 'https://path/to/your/icon.png' }}
+        source={{ uri: 'https://freyashop.store/wp-content/uploads/2024/03/Ve-tay-Hinh-tron-Logo-1.png' }}
         style={styles.logo}
       />
       <Text style={styles.title}>Welcome back.</Text>

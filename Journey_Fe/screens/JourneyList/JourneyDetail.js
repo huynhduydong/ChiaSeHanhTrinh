@@ -1,32 +1,21 @@
 import React, { useState, useEffect } from 'react';
-import {
-  Text,
-  View,
-  ScrollView,
-  StyleSheet,
-  ActivityIndicator,
-  Image,
-  Dimensions,
-} from 'react-native';
-import { Button, Card, Chip, TextInput } from 'react-native-paper';
+import { ScrollView, StyleSheet, ActivityIndicator, View, Text, Image, Alert, TouchableOpacity } from 'react-native';
+import { Button, Card, TextInput, Chip } from 'react-native-paper';
 import API, { authApi, endpoints } from '../../configs/API';
-import HTML from 'react-native-render-html';
-import moment from 'moment';
+import JourneyDetailItem from '../../components/JourneyDetailItem';
 import { isCloseToBottom } from '../../utils/Utils';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import moment from 'moment';
 
-const defaultAvatar = 'https://scontent.fsgn2-6.fna.fbcdn.net/v/t39.30808-6/409808276_2136446710040143_4957388703891454700_n.jpg?_nc_cat=111&ccb=1-7&_nc_sid=5f2048&_nc_eui2=AeGkRobaUFCGL3eLId4b6Mo_FZp0t1X6XFEVmnS3VfpcUWxNFPmslVUO3TRGkc05PGgn_12pb6IiEk8-8npqV_Qg&_nc_ohc=A8Cm3wnYWO0Q7kNvgFdK7Bx&_nc_ht=scontent.fsgn2-6.fna&oh=00_AYCHjKcBQtDZFiQ-uK1k0af2gIle8_nT1J1ETxkMrKffzQ&oe=664AA66B';
-
-const JourneyDetail = ({ route }) => {
+const JourneyDetail = ({ route, navigation }) => {
   const [journey, setJourney] = useState(null);
   const { JourneyId } = route.params;
   const [comments, setComments] = useState([]);
   const [content, setContent] = useState("");
   const [placeVisits, setPlaceVisit] = useState([]);
-  const [images,setImage] = useState([]);
-
-
+  const [images, setImage] = useState([]);
   const [joinJourneys, setJoinJourneys] = useState([]);
+  const [commentsClosed, setCommentsClosed] = useState(false);
 
   useEffect(() => {
     const loadComments = async () => {
@@ -39,6 +28,7 @@ const JourneyDetail = ({ route }) => {
     };
     loadComments();
   }, [JourneyId]);
+
   useEffect(() => {
     const loadImage = async () => {
       try {
@@ -50,6 +40,7 @@ const JourneyDetail = ({ route }) => {
     };
     loadImage();
   }, [JourneyId]);
+
   useEffect(() => {
     const loadPlaceVisits = async () => {
       try {
@@ -65,7 +56,6 @@ const JourneyDetail = ({ route }) => {
   useEffect(() => {
     const loadJoinJourneys = async () => {
       try {
-        
         let res = await API.get(endpoints['join_detail'](JourneyId));
         setJoinJourneys(res.data);
       } catch (ex) {
@@ -80,6 +70,8 @@ const JourneyDetail = ({ route }) => {
       try {
         let res = await API.get(endpoints['journeys_detail'](JourneyId));
         setJourney(res.data);
+        setCommentsClosed(res.data.comments_closed); // Cập nhật trạng thái commentsClosed
+
       } catch (ex) {
         console.error(ex);
       }
@@ -96,7 +88,6 @@ const JourneyDetail = ({ route }) => {
   const addComment = async () => {
     try {
       let token = await AsyncStorage.getItem('access-token');
-
       let res = await authApi(token).post(endpoints['comments'](JourneyId), {
         'cmt': content,
       });
@@ -109,8 +100,7 @@ const JourneyDetail = ({ route }) => {
   const acceptJoinRequest = async (userId) => {
     try {
       let token = await AsyncStorage.getItem('access-token');
-
-      let res = await authApi(token).post(endpoints['add_join'](JourneyId),{ user_id: userId });
+      let res = await authApi(token).post(endpoints['add_join'](JourneyId), { user_id: userId });
       setJoinJourneys(current => [...current, { user: { id: userId } }]);
     } catch (ex) {
       console.error(ex);
@@ -121,83 +111,78 @@ const JourneyDetail = ({ route }) => {
     return joinJourneys.some(join => join.user.id === userId);
   };
 
+  const handleEditJourney = (item) => {
+   navigation.navigate('UpdateJourney', { JourneyId: item });  
+  };
+
+  const handleCompleteJourney = async (item) => {
+    try {
+      let token = await AsyncStorage.getItem('access-token');
+      let res = await authApi(token).post(endpoints['complete'](item));
+      Alert.alert('Success', 'Journey marked as completed.');
+      console.log('Journey marked as completed.'); 
+    } catch (ex) {
+      console.error(ex);
+      Alert.alert('Error', 'Failed to marked as completed Journey. Please try again.');
+
+    }
+
+  };
+  const handleAvatarPress = (id) => {
+    navigation.navigate("ProfileScreen", { "userId": id });
+  };
+  const handleCloseComments = async   (item) => {
+    try {
+      let token = await AsyncStorage.getItem('access-token');
+      await authApi(token).post(endpoints['close_comments'](item));
+      setCommentsClosed(true);
+      Alert.alert('Success', 'Journey closed comments .');
+      console.log('Journey closed comments .'); 
+
+    } catch (ex) {
+      console.error(ex);
+      Alert.alert('Error', 'Failed to closed comments Journey. Please try again.');
+    }  };
+
   if (!journey) {
     return <ActivityIndicator style={styles.loader} size="large" color="#0000ff" />;
   }
 
   return (
     <ScrollView onScroll={loadMoreInfo} style={styles.container}>
-      <Card style={styles.card}>
-        <Card.Cover
-          style={styles.image}
-          source={{ uri: journey.main_image || defaultAvatar }}
-        />
-        <Card.Content>
-          <Text style={styles.title}>{journey.name}</Text>
-          {journey.user_journey && (
-            <View style={styles.userContainer}>
-              <Chip icon="account" style={styles.chip}>{journey.user_journey.username}</Chip>
-              <Text style={styles.subtitle}>Full Name: {journey.user_journey.first_name} {journey.user_journey.last_name}</Text>
-            </View>
-          )}
-          <HTML contentWidth={Dimensions.get('window').width} source={{ html: journey.description }} />
-          <View style={styles.placeVisitsContainer}>
-            {placeVisits.length > 0 ? (
-              placeVisits.map(placeVisit => (
-                <Card key={placeVisit.id} style={styles.placeVisitCard}>
-                  <Card.Content>
-                    <Text style={styles.placeVisitName}>{placeVisit.name}</Text>
-                    <Text style={styles.placeVisitDescription}>{placeVisit.description}</Text>
-                    <Text style={styles.placeVisitLocation}>Location: {placeVisit.latitude}, {placeVisit.longitude}</Text>
-                    <Text style={styles.placeVisitAddress}>Address: {placeVisit.address}</Text>
-                  </Card.Content>
-                </Card>
-              ))
-            ) : (
-              <Text style={styles.noPlaceVisits}>No place visits available.</Text>
-            )}
-          </View>
-          <View>
-          {images.length > 0 ? (
-              images.map(image => (
-                <Card key={image.id} style={styles.placeVisitCard}>
-                  <Card.Content>
-                    <Text style={styles.placeVisitName}>{image.content}</Text>
-                    <Image
-                source={{ uri: image.image }}
-                style={styles.avatar}
-              />
-                  </Card.Content>
-                </Card>
-              ))
-            ) : (
-              <Text style={styles.noPlaceVisits}>No Image available.</Text>
-            )}
-          </View>
-        </Card.Content>
-        
-      </Card>
-      <View style={styles.commentSection}>
-        <TextInput
-          multiline={true}
-          label="Nội dung bình luận..."
-          value={content}
-          onChangeText={setContent}
-          mode="outlined"
-          style={styles.commentInput}
-        />
-        <Button mode="contained" onPress={addComment} style={styles.commentButton}>
-          Thêm bình luận
-        </Button>
-      </View>
+      <JourneyDetailItem
+        item={{ ...journey, place_visits: placeVisits, images }}
+        onEdit={handleEditJourney}
+        onComplete={handleCompleteJourney}
+        onCloseComments={handleCloseComments}
+        commentsClosed={commentsClosed}
+        handleAvatarPress={handleAvatarPress}
+      />
+      {!commentsClosed && (
+        <View style={styles.commentSection}>
+          <TextInput
+            multiline={true}
+            label="Nội dung bình luận..."
+            value={content}
+            onChangeText={setContent}
+            mode="outlined"
+            style={styles.commentInput}
+          />
+          <Button mode="contained" onPress={addComment} style={styles.commentButton}>
+            Thêm bình luận
+          </Button>
+        </View>
+      )}
+      {commentsClosed && (
+        <Text style={styles.commentsClosedMessage}>Bình luận đã bị đóng bởi chủ hành trình.</Text>
+      )}
       <View style={styles.commentsContainer}>
         {comments.length > 0 ? comments.map(c => (
           <Card key={c.id} style={styles.commentCard}>
             <Card.Content style={styles.commentContent}>
-              <Image
-                source={{ uri: c.user.avatar || defaultAvatar }}
-                style={styles.avatar}
-              />
+            <TouchableOpacity onPress={() => navigation.navigate('ProfileScreen', { userId: c.user.id })}>
+        <Image source={{ uri: c.user.avatar }} style={styles.avatar} />
+      </TouchableOpacity>
               <View style={styles.commentTextContainer}>
                 <Text style={styles.commentUsername}>{c.user.username}</Text>
                 <Text style={styles.commentText}>{c.cmt}</Text>
@@ -217,6 +202,7 @@ const JourneyDetail = ({ route }) => {
       </View>
     </ScrollView>
   );
+  
 };
 
 const styles = StyleSheet.create({
@@ -229,31 +215,6 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  card: {
-    marginVertical: 10,
-    borderRadius: 10,
-  },
-  image: {
-    height: 200,
-    borderTopLeftRadius: 10,
-    borderTopRightRadius: 10,
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    marginVertical: 10,
-  },
-  userContainer: {
-    marginBottom: 20,
-  },
-  chip: {
-    marginVertical: 5,
-  },
-  subtitle: {
-    fontSize: 16,
-    color: '#555',
-    marginBottom: 5,
   },
   commentSection: {
     marginVertical: 10,
@@ -308,28 +269,6 @@ const styles = StyleSheet.create({
   acceptedChip: {
     marginTop: 10,
     backgroundColor: '#4CAF50',
-  },
-  placeVisitsContainer: {
-    marginTop: 20,
-  },
-  placeVisitCard: {
-    marginBottom: 10,
-  },
-  placeVisitName: {
-    fontSize: 18,
-    fontWeight: 'bold',
-  },
-  placeVisitDescription: {
-    fontSize: 14,
-    color: '#555',
-  },
-  placeVisitLocation: {
-    fontSize: 12,
-    color: '#333',
-  },
-  placeVisitAddress: {
-    fontSize: 12,
-    color: '#333',
   },
 });
 
