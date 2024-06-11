@@ -2,9 +2,11 @@ from datetime import datetime
 
 from ckeditor.fields import RichTextField
 from django.contrib.auth.models import AbstractUser
+from django.core.validators import MinValueValidator, MaxValueValidator
 from django.db import models
 from cloudinary.models import CloudinaryField
 from django.shortcuts import get_object_or_404
+from django.utils import timezone
 
 
 class User(AbstractUser):
@@ -26,7 +28,6 @@ class User(AbstractUser):
         return False
 
 
-
 class BaseModel(models.Model):
     created_date = models.DateTimeField(auto_now_add=True)
     updated_date = models.DateTimeField(auto_now=True)
@@ -42,16 +43,33 @@ class Tag(BaseModel):
         return self.name
 
 
+class JourneyQuerySet(models.QuerySet):
+    def active(self):
+        return self.filter(
+            is_completed=False,
+            end_date__gte=timezone.now().date()
+        ) | self.filter(
+            is_completed=False,
+            end_date__isnull=True
+        )
+
+
 class Journey(BaseModel):
     name = models.CharField(max_length=150, null=False)
     main_image = models.ImageField(upload_to='journeys/%Y/%m', default=None,null=True)
     description = RichTextField(null=True, default=None)
     user_journey = models.ForeignKey(User, on_delete=models.CASCADE, null=True)
     tags = models.ManyToManyField('Tag')
+    end_date = models.DateField(null=True, blank=True)  # Thêm trường ngày kết thúc
+    is_completed = models.BooleanField(default=False)  # Thêm trường hoàn thành
+    comments_closed = models.BooleanField(default=False)
+    objects = JourneyQuerySet.as_manager()
 
     def __str__(self):
         return self.name
 
+    def is_active(self):
+        return not self.is_completed and (self.end_date is None or self.end_date >= timezone.now().date())
 
 
 class Interaction(BaseModel):
@@ -67,13 +85,15 @@ class Comment(Interaction):
     is_deleted = models.BooleanField(default=False)  # Thêm trường này
 
 
-
 class JoinJourney(Interaction):
     pass
 
 
 class Rating(Interaction):
-    rate = models.SmallIntegerField(default=0)
+    rate = models.SmallIntegerField(
+        default=0,
+        validators=[MinValueValidator(1), MaxValueValidator(5)]
+    )
 
 
 class Report(models.Model):

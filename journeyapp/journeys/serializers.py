@@ -4,7 +4,7 @@ from rest_framework.fields import SerializerMethodField
 import journeys
 from journeyapp import settings
 from journeys.models import Journey, User, Comment, PlaceVisit, Tag, JoinJourney, ImageJourney, CommentImageJourney, \
-    Report, ActivityLog
+    Report, ActivityLog, Rating
 
 
 class TagSerializer(serializers.ModelSerializer):
@@ -73,11 +73,51 @@ class UserRegisterSerializer(serializers.ModelSerializer):
         user.set_password(validated_data['password'])
         user.save()
         return user
+
+
+class UserProfileSerializer(serializers.ModelSerializer):
+    average_rating = serializers.SerializerMethodField()
+    journey_count = serializers.SerializerMethodField()
+    avatar = SerializerMethodField()
+
+    def get_avatar(self, obj):
+        if obj.avatar:
+            return '{}{}'.format(settings.CLOUDINARY_ROOT_URL, obj.avatar)
+        return None
+
+    def get_journey_count(self, obj):
+        return Journey.objects.filter(user_journey=obj).count()
+
+    def get_average_rating(self, obj):
+        journeys = Journey.objects.filter(user_journey=obj)
+        ratings = Rating.objects.filter(journey__in=journeys)
+        if ratings.exists():
+            total_rating = sum(r.rate for r in ratings)
+            count = ratings.count()
+            return total_rating / count if count > 0 else 0
+        return 0
+
+    class Meta:
+        model = User
+        fields = ['id', 'username', 'avatar', 'first_name', 'last_name', 'email', 'password', 'average_rating', 'journey_count']
+        read_only_fields = ['username', 'email', 'password', 'average_rating', 'journey_count']
+
+
+
 class JourneySerializer(BaseSerializer):
     user_journey = UserSerializer()
+    comments_count = serializers.SerializerMethodField()
+    join_count = serializers.SerializerMethodField()
+
     class Meta:
         model = Journey
-        fields = ['id', 'name', 'main_image', 'tags', 'description', 'user_journey']
+        fields = ['id', 'name', 'main_image', 'created_date', 'tags', 'description', 'user_journey', 'comments_count', 'join_count']
+
+    def get_comments_count(self, obj):
+        return Comment.objects.filter(journey=obj).count()
+
+    def get_join_count(self, obj):
+        return JoinJourney.objects.filter(journey=obj).count()
 
 
 class AddJourneySerializer(serializers.ModelSerializer):
@@ -103,12 +143,6 @@ class UpdateJourneySerializer(BaseSerializer):
         fields = ['id', 'name', 'main_image', 'description']
 
 
-class PlaceVisitSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = PlaceVisit
-        fields = '__all__'
-
-
 class ImageJourneySerializer(serializers.ModelSerializer):
     image = SerializerMethodField()
     user = UserSerializer()
@@ -126,12 +160,12 @@ class CommentImageJourneySerializer(serializers.ModelSerializer):
         model = CommentImageJourney
         fields = ['id', 'cmt','user']
 
+
 class JourneyDetailSerializer(BaseSerializer):
 
     class Meta:
         model = Journey
-        fields = ['id', 'name', 'main_image', 'tags', 'description']
-
+        fields = ['id', 'name', 'main_image', 'tags', 'description', 'is_completed', 'comments_closed']
 
 
 class LoginSerializer(serializers.ModelSerializer):
@@ -152,10 +186,12 @@ class CommentSerializer(serializers.ModelSerializer):
         fields = ['id', 'cmt', 'user', 'created_date']
         # read_only_fields = 'user'
 
+
 class ActivityLogSerializer(serializers.ModelSerializer):
     class Meta:
         model = ActivityLog
         fields = ['activity_type', 'description', 'timestamp']
+
 
 class JoinJourneySerializer(serializers.ModelSerializer):
     user = UserSerializer()

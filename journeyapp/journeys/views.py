@@ -10,10 +10,9 @@ from rest_framework.viewsets import ViewSet
 from rest_framework.parsers import MultiPartParser, FormParser
 
 from journeys import serializers, perms
-from journeys.models import Journey, User, Comment, JoinJourney, PlaceVisit, ImageJourney, CommentImageJourney, Report, \
-    ActivityLog
-
-from journeys.serializers import UserSerializer, PlaceVisitSerializer,ReportSerializer, LoginSerializer, UserRegisterSerializer
+from journeys.models import *
+from journeys.serializers import UserSerializer, PlaceVisitSerializer, ReportSerializer, LoginSerializer, \
+    UserRegisterSerializer, UserProfileSerializer
 
 
 class AddJourneyViewSet(generics.CreateAPIView):
@@ -39,8 +38,11 @@ class JourneyViewSet(viewsets.ViewSet, generics.ListAPIView):
     queryset = Journey.objects.all()
     serializer_class = serializers.JourneySerializer
 
+    def get_queryset(self):
+        return Journey.objects.active()
+
     def get_permissions(self):
-        if self.action in [ 'journeys']:
+        if self.action in ['journeys']:
             return [permissions.IsAuthenticated()]
         return [permissions.AllowAny()]
 
@@ -74,9 +76,30 @@ class JourneyDetailViewSet(viewsets.ViewSet, generics.RetrieveAPIView):
     permission_classes = [permissions.AllowAny]
 
     def get_permissions(self):
-        if self.action in ['get_comments', 'get_join_journey', 'image'] and self.request.method == 'POST':
+        if self.action in ['get_comments', 'get_join_journey', 'image', 'complete', 'close_comments'] and self.request.method == 'POST':
             return [permissions.IsAuthenticated()]
         return super().get_permissions()
+
+    @action(detail=True, methods=['post'], permission_classes=[permissions.IsAuthenticated])
+    def complete(self, request, pk=None):
+        journey = self.get_object()
+        if journey.user_journey != request.user:
+            return Response({'error': 'You do not have permission to complete this journey.'}, status=403)
+
+        journey.is_completed = True
+        journey.save()
+        return Response({'status': 'Journey marked as completed.'})
+
+    @action(detail=True, methods=['post'], permission_classes=[permissions.IsAuthenticated])
+    def close_comments(self, request, pk=None):
+        journey = self.get_object()
+        if journey.user_journey != request.user:
+            return Response({'error': 'You do not have permission to closed comments this journey.'}, status=403)
+
+        journey.comments_closed = True
+        journey.save()
+        return Response({'status': 'Journey closed comments .'})
+
 
     @action(methods=['get', 'post'], url_path='comments', detail=True)
     def get_comments(self, request, pk):
@@ -172,6 +195,29 @@ class UserViewSet(ViewSet, GenericAPIView):
     @action(methods=['get'], url_path='current-user', url_name='current-user', detail=False)
     def current_user(self, request):
         return Response(UserSerializer(request.user).data)
+
+    @action(methods=['get'], detail=True, url_path='profile_user', url_name='profile_user')
+    def profile_user(self, request, pk=None):
+        try:
+            user = self.get_object()
+            return Response(UserProfileSerializer(user).data, status=status.HTTP_200_OK)
+        except User.DoesNotExist:
+            return Response({"error": "User not found"}, status=404)
+
+    @action(methods=['get', 'patch'], detail=False, url_path='current_user_profile', url_name='current_user_profile')
+    def current_user_profile(self, request):
+        user = request.user
+        if request.method == "GET":
+            try:
+                return Response(UserProfileSerializer(user).data, status=status.HTTP_200_OK)
+            except User.DoesNotExist:
+                return Response({"error": "User not found"}, status=404)
+        elif request.method == "PATCH":
+            serializer = UserProfileSerializer(user, data=request.data, partial=True)
+            if serializer.is_valid():
+                serializer.save()
+                return Response(serializer.data, status=status.HTTP_200_OK)
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     @action(methods=["post"], url_path="login", detail=False, permission_classes=[AllowAny],
             serializer_class=LoginSerializer)
@@ -349,9 +395,9 @@ class ReportCreateView(generics.CreateAPIView):
     def perform_create(self, serializer):
         serializer.save(reporter=self.request.user)
 
-        # Ghi lại hoạt động báo cáo
-        ActivityLog.objects.create(
-            user=self.request.user,
-            activity_type='create_report',
-            description=f'Reported journey: {serializer.validated_data["journey"].name}'
-        )
+        # # Ghi lại hoạt động báo cáo
+        # ActivityLog.objects.create(
+        #     user=self.request.user,
+        #     activity_type='create_report',
+        #     description=f'Reported user: {serializer.validated_data["user"].name}'
+        # )

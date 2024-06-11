@@ -1,6 +1,5 @@
 from django.urls import path, include
 from rest_framework import routers
-from rest_framework_nested import routers as nested_routers
 from . import views
 
 # Main routers
