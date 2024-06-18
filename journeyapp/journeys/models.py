@@ -5,7 +5,7 @@ from django.contrib.auth.models import AbstractUser
 from django.core.validators import MinValueValidator, MaxValueValidator
 from django.db import models
 from cloudinary.models import CloudinaryField
-from django.shortcuts import get_object_or_404
+from django.db.models import Q, Count
 from django.utils import timezone
 
 
@@ -36,6 +36,7 @@ class BaseModel(models.Model):
     class Meta:
         abstract = True
 
+
 class Tag(BaseModel):
     name = models.CharField(max_length=50, unique=True)
 
@@ -53,6 +54,29 @@ class JourneyQuerySet(models.QuerySet):
             end_date__isnull=True
         )
 
+    def search_by_keyword(self, keyword):
+        return self.filter(Q(name__icontains=keyword) | Q(description__icontains=keyword))
+
+    def filter_by_tags(self, tags):
+        if not tags:
+            return self
+        query = self
+        query = query.annotate(
+            matching_tags_count=Count('tags', filter=Q(tags__id__in=tags))
+        ).filter(
+            matching_tags_count=len(tags)
+        )
+        return query
+
+    def filter_by_username(self, username):
+        return self.filter(user_journey__username__icontains=username)
+
+    def filter_by_end_date_range(self, start_date, end_date):
+        return self.filter(end_date__range=(start_date, end_date))
+
+    def search_by_place_name(self, place_name):
+        return self.filter(placevisits__name__icontains=place_name).distinct()
+
 
 class Journey(BaseModel):
     name = models.CharField(max_length=150, null=False)
@@ -60,8 +84,9 @@ class Journey(BaseModel):
     description = RichTextField(null=True, default=None)
     user_journey = models.ForeignKey(User, on_delete=models.CASCADE, null=True)
     tags = models.ManyToManyField('Tag')
-    end_date = models.DateField(null=True, blank=True)  # Thêm trường ngày kết thúc
-    is_completed = models.BooleanField(default=False)  # Thêm trường hoàn thành
+    end_date = models.DateField(null=True, blank=True)
+    start_date = models.DateField(null=True, blank=True)
+    is_completed = models.BooleanField(default=False)
     comments_closed = models.BooleanField(default=False)
     objects = JourneyQuerySet.as_manager()
 
@@ -94,6 +119,7 @@ class Rating(Interaction):
         default=0,
         validators=[MinValueValidator(1), MaxValueValidator(5)]
     )
+    content = models.CharField(max_length=200,null= True)
 
 
 class Report(models.Model):
@@ -125,7 +151,7 @@ class PlaceVisit(models.Model):
     timestamp = models.DateTimeField(auto_now_add=True)
     address = models.CharField(max_length=200, blank=True, null=True)
     image = models.ImageField(upload_to='place_images/%Y/%m', default=None,null=True)
-    journey = models.ForeignKey(Journey, on_delete=models.CASCADE, null=True)
+    journey = models.ForeignKey(Journey, on_delete=models.CASCADE, related_name='placevisits', null=True)
 
     def __str__(self):
         return self.name if self.name else f'Place at ({self.latitude}, {self.longitude})'

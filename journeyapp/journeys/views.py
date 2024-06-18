@@ -12,7 +12,7 @@ from rest_framework.parsers import MultiPartParser, FormParser
 from journeys import serializers, perms
 from journeys.models import *
 from journeys.serializers import UserSerializer, PlaceVisitSerializer, ReportSerializer, LoginSerializer, \
-    UserRegisterSerializer, UserProfileSerializer
+    UserRegisterSerializer, UserProfileSerializer, TagSerializer, RatingSerializer
 
 
 class AddJourneyViewSet(generics.CreateAPIView):
@@ -34,6 +34,11 @@ class AddJourneyViewSet(generics.CreateAPIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
+class TagViewSet(viewsets.ViewSet,generics.ListAPIView):
+    queryset = Tag.objects.all()
+    serializer_class = serializers.TagSerializer
+
+
 class JourneyViewSet(viewsets.ViewSet, generics.ListAPIView):
     queryset = Journey.objects.all()
     serializer_class = serializers.JourneySerializer
@@ -45,6 +50,30 @@ class JourneyViewSet(viewsets.ViewSet, generics.ListAPIView):
         if self.action in ['journeys']:
             return [permissions.IsAuthenticated()]
         return [permissions.AllowAny()]
+
+    @action(detail=False, methods=['get'])
+    def search(self, request):
+        queryset = self.get_queryset()
+        keyword = request.query_params.get('keyword', None)
+        tags = request.query_params.getlist('tags', None)
+        username = request.query_params.get('username', None)
+        start_date = request.query_params.get('start_date', None)
+        end_date = request.query_params.get('end_date', None)
+        place_name = request.query_params.get('place_name', None)
+
+        if keyword:
+            queryset = queryset.search_by_keyword(keyword)
+        if tags:
+            queryset = queryset.filter_by_tags(tags)
+        if username:
+            queryset = queryset.filter_by_username(username)
+        if start_date and end_date:
+            queryset = queryset.filter_by_end_date_range(start_date, end_date)
+        if place_name:
+            queryset = queryset.search_by_place_name(place_name)
+
+        serializer = self.get_serializer(queryset, many=True)
+        return Response(serializer.data)
 
     @action(url_path='journey_by_user', detail=False, methods=['get'])
     def journeys(self, request):
@@ -68,6 +97,18 @@ class JourneyViewSet(viewsets.ViewSet, generics.ListAPIView):
                 'join_count': join_count
             })
         return Response(data, status=status.HTTP_200_OK)
+
+    @action(url_path='joined_journeys', detail=False, methods=['get'])
+    def joined_journeys(self, request):
+        if not request.user.is_authenticated:
+            return Response({"detail": "Authentication credentials were not provided."},
+                            status=status.HTTP_401_UNAUTHORIZED)
+
+        user = request.user
+        joined_journey_ids = JoinJourney.objects.filter(user=user).values_list('journey_id', flat=True)
+        journeys = Journey.objects.filter(id__in=joined_journey_ids)
+        serializer = self.get_serializer(journeys, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
 
 class JourneyDetailViewSet(viewsets.ViewSet, generics.RetrieveAPIView):
@@ -99,7 +140,6 @@ class JourneyDetailViewSet(viewsets.ViewSet, generics.RetrieveAPIView):
         journey.comments_closed = True
         journey.save()
         return Response({'status': 'Journey closed comments .'})
-
 
     @action(methods=['get', 'post'], url_path='comments', detail=True)
     def get_comments(self, request, pk):
@@ -273,12 +313,11 @@ class JoinJourneyRetrieveUpdateDestory(generics.RetrieveUpdateDestroyAPIView):
 class ImageJourneyDetail(viewsets.ViewSet, generics.RetrieveUpdateDestroyAPIView):
     queryset = ImageJourney.objects.filter(active=True)
     serializer_class = serializers.ImageJourneySerializer
-    permission_classes = [permissions.AllowAny]
 
     def get_permissions(self):
-        if self.action in ['get_comment']:
+        if self.action in ['get_comment'] and self.request.method == 'POST':
             return [permissions.IsAuthenticated()]
-        return self.permission_classes
+        return [permissions.AllowAny()]
 
     @action(methods=['get', 'post'], url_path='comment', detail=True)
     def get_comment(self, request, pk):
@@ -401,3 +440,18 @@ class ReportCreateView(generics.CreateAPIView):
         #     activity_type='create_report',
         #     description=f'Reported user: {serializer.validated_data["user"].name}'
         # )
+
+
+class RatingCreateView(generics.CreateAPIView):
+    queryset = Rating.objects.all()
+    serializer_class = RatingSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def perform_create(self, serializer):
+        rating = serializer.save(user=self.request.user)
+        ActivityLog.objects.create(
+            user=self.request.user,
+            activity_type='Rating',
+            description=f'User {self.request.user.username} rated Journey {rating.journey.name} with a score of {rating.rate}'
+        )
+

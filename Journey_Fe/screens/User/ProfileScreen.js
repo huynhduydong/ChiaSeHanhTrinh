@@ -64,22 +64,19 @@ const ProfileScreen = ({ route }) => {
         <Text style={styles.status}>Active</Text>
       </View>
       <View style={styles.body}>
-        <Text style={styles.label}>Username</Text>
+        <Text style={styles.label}>Tên tài khoản</Text>
         <TextInput style={styles.input} value={profile.username} editable={false} />
 
-        <Text style={styles.label}>First Name</Text>
-        <TextInput style={styles.input} value={profile.first_name} editable={false} />
-
-        <Text style={styles.label}>Last Name</Text>
-        <TextInput style={styles.input} value={profile.last_name} editable={false} />
+        <Text style={styles.label}>Họ và tên</Text>
+        <TextInput style={styles.input} value={profile.first_name+ profile.last_name} editable={false} />
 
         <Text style={styles.label}>Email</Text>
         <TextInput style={styles.input} value={profile.email} editable={false} />
 
-        <Text style={styles.label}>Average Rating</Text>
+        <Text style={styles.label}>Đánh giá độ tin cậy (Rating) </Text>
         <TextInput style={styles.input} value={String(profile.average_rating)} editable={false} />
 
-        <Text style={styles.label}>Journey Count</Text>
+        <Text style={styles.label}>Số hành trình đã đăng</Text>
         <TextInput style={styles.input} value={String(profile.journey_count)} editable={false} />
       </View>
       <Button 

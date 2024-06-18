@@ -9,6 +9,9 @@ export const endpoints = {
     'add_comments': (JourneyId) => `/journey/${JourneyId}/comments/`,
     'join_detail': (JourneyId) => `/journey/${JourneyId}/join/`,
     'image_journey': (JourneyId) => `/journey/${JourneyId}/image/`,
+    'image_journey_detail': (imageJourneyId) => `/image_journey/${imageJourneyId}/`,
+    'comments_image_journey': (imageJourneyId) => `/image_journey/${imageJourneyId}/comment/`,
+
 
     'add_join': (JourneyId) => `/journey/${JourneyId}/join/`,
     'complete': (JourneyId) => `/journey/${JourneyId}/complete/`,
@@ -18,10 +21,15 @@ export const endpoints = {
     'place_visits': (JourneyId) => `/journeys/${JourneyId}/place_visits/`,
 
     journey_by_user : `/journeys/journey_by_user/`,
+    joined_journeys : `/journeys/joined_journeys/`,
+
     'login': '/o/token/',
     'register': '/register',
     'reports': '/reports/',
     'current_user_profile': '/user/current_user_profile/',
+    'tags': '/tags/',
+    'search': '/journeys/search/',
+
 
     'current-user': '/user/current-user/',
     'profile_user':(userId)=>`/user/${userId}/profile_user/`,

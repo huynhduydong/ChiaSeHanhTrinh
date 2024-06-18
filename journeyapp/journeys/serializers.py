@@ -103,15 +103,22 @@ class UserProfileSerializer(serializers.ModelSerializer):
         read_only_fields = ['username', 'email', 'password', 'average_rating', 'journey_count']
 
 
+class PlaceVisitSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = PlaceVisit
+        fields = ['id', 'latitude', 'longitude', 'name', 'description', 'address', 'image', 'journey']
+
 
 class JourneySerializer(BaseSerializer):
     user_journey = UserSerializer()
     comments_count = serializers.SerializerMethodField()
     join_count = serializers.SerializerMethodField()
+    tags = serializers.StringRelatedField(many=True)
+    placevisits = PlaceVisitSerializer(many=True, read_only=True)
 
     class Meta:
         model = Journey
-        fields = ['id', 'name', 'main_image', 'created_date', 'tags', 'description', 'user_journey', 'comments_count', 'join_count']
+        fields = ['id', 'name', 'main_image', 'created_date', 'tags', 'description', 'user_journey', 'comments_count', 'join_count', 'placevisits',  'end_date', 'start_date']
 
     def get_comments_count(self, obj):
         return Comment.objects.filter(journey=obj).count()
@@ -123,24 +130,19 @@ class JourneySerializer(BaseSerializer):
 class AddJourneySerializer(serializers.ModelSerializer):
     class Meta:
         model = Journey
-        fields = ['id', 'name', 'description', 'main_image']
+        fields = ['id', 'name', 'description', 'main_image', 'end_date', 'start_date']
+
     def create(self, validated_data):
         request = self.context.get('request', None)
         user = request.user if request else None
         return Journey.objects.create(user_journey=user, **validated_data)
 
 
-class PlaceVisitSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = PlaceVisit
-        fields = ['latitude', 'longitude', 'name', 'description', 'address', 'image']
-
-
 class UpdateJourneySerializer(BaseSerializer):
 
     class Meta:
         model = Journey
-        fields = ['id', 'name', 'main_image', 'description']
+        fields = ['id', 'name', 'main_image', 'description',  'end_date', 'start_date']
 
 
 class ImageJourneySerializer(serializers.ModelSerializer):
@@ -165,7 +167,7 @@ class JourneyDetailSerializer(BaseSerializer):
 
     class Meta:
         model = Journey
-        fields = ['id', 'name', 'main_image', 'tags', 'description', 'is_completed', 'comments_closed']
+        fields = ['id', 'name', 'main_image', 'tags', 'description', 'is_completed', 'comments_closed', 'end_date', 'start_date']
 
 
 class LoginSerializer(serializers.ModelSerializer):
@@ -213,25 +215,22 @@ class ActiveUserSerializer(serializers.ModelSerializer):
         model = User
         fields = ['is_active']
 
-class RefreshTokenSerializer(serializers.Serializer):
-    refresh_token = serializers.CharField()
 
-class ForgotPasswordSerializer(serializers.Serializer):
-    user_identifier = serializers.CharField()
+class RatingSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Rating
+        fields = ['id', 'journey', 'user', 'rate', 'content']
+        read_only_fields = ['user']
 
-class SendResetPasswordLinkSerializer(serializers.Serializer):
-    email = serializers.EmailField()
+    def validate(self, data):
+        if not data['journey'].is_completed:
+            raise serializers.ValidationError("Hành trình chưa kết thúc, không thể rating.")
 
-class SendOTPSerializer(serializers.Serializer):
-    phone_number = serializers.CharField()
+        user = self.context['request'].user
+        if not JoinJourney.objects.filter(journey=data['journey'], user=user).exists():
+            raise serializers.ValidationError("User chưa tham gia hành trình này.")
 
-class VerifyOTPSerializer(serializers.Serializer):
-    phone_number = serializers.CharField()
-    otp = serializers.CharField()
+        if Rating.objects.filter(journey=data['journey'], user=user).exists():
+            raise serializers.ValidationError("User đã rating hành trình này rồi.")
 
-class ResetPasswordSerializer(serializers.Serializer):
-    password = serializers.CharField()
-
-class LogoutSerializer(serializers.Serializer):
-    fcm_token = serializers.CharField(required=False, allow_blank=True, allow_null=True)
-    device_type = serializers.CharField(required=False, allow_blank=True, allow_null=True)
+        return data

@@ -12,6 +12,9 @@ https://docs.djangoproject.com/en/5.0/ref/settings/
 import os
 from pathlib import Path
 
+import firebase_admin
+from firebase_admin import credentials
+
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -53,10 +56,13 @@ INSTALLED_APPS = [
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'oauth2_provider.contrib.rest_framework.OAuth2Authentication',
+        'chat.authentication.FirebaseAuthentication',
+
     )
 }
 CKEDITOR_UPLOAD_PATH = "ckeditor/images/"
-
+cred = credentials.Certificate("firebase-credentials.json")
+firebase_admin.initialize_app(cred)
 import cloudinary
 cloudinary.config(
     cloud_name="dxodnq83l",

@@ -1,11 +1,13 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useCallback } from 'react';
 import { ScrollView, StyleSheet, ActivityIndicator, View, Text, Image, Alert, TouchableOpacity } from 'react-native';
 import { Button, Card, TextInput, Chip } from 'react-native-paper';
+import { useFocusEffect } from '@react-navigation/native';
 import API, { authApi, endpoints } from '../../configs/API';
 import JourneyDetailItem from '../../components/JourneyDetailItem';
 import { isCloseToBottom } from '../../utils/Utils';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import moment from 'moment';
+import styles from '../../constants/styles';
 
 const JourneyDetail = ({ route, navigation }) => {
   const [journey, setJourney] = useState(null);
@@ -17,67 +19,61 @@ const JourneyDetail = ({ route, navigation }) => {
   const [joinJourneys, setJoinJourneys] = useState([]);
   const [commentsClosed, setCommentsClosed] = useState(false);
 
-  useEffect(() => {
-    const loadComments = async () => {
-      try {
-        let res = await API.get(endpoints['comments'](JourneyId));
-        setComments(res.data);
-      } catch (ex) {
-        console.error(ex);
-      }
-    };
-    loadComments();
+  const loadComments = useCallback(async () => {
+    try {
+      let res = await API.get(endpoints['comments'](JourneyId));
+      setComments(res.data);
+    } catch (ex) {
+      console.error(ex);
+    }
   }, [JourneyId]);
 
-  useEffect(() => {
-    const loadImage = async () => {
-      try {
-        let res = await API.get(endpoints['image_journey'](JourneyId));
-        setImage(res.data);
-      } catch (ex) {
-        console.error(ex);
-      }
-    };
-    loadImage();
+  const loadImage = useCallback(async () => {
+    try {
+      let res = await API.get(endpoints['image_journey'](JourneyId));
+      setImage(res.data);
+    } catch (ex) {
+      console.error(ex);
+    }
   }, [JourneyId]);
 
-  useEffect(() => {
-    const loadPlaceVisits = async () => {
-      try {
-        let res = await API.get(endpoints['place_visits'](JourneyId));
-        setPlaceVisit(res.data);
-      } catch (ex) {
-        console.error(ex);
-      }
-    };
-    loadPlaceVisits();
+  const loadPlaceVisits = useCallback(async () => {
+    try {
+      let res = await API.get(endpoints['place_visits'](JourneyId));
+      setPlaceVisit(res.data);
+    } catch (ex) {
+      console.error(ex);
+    }
   }, [JourneyId]);
 
-  useEffect(() => {
-    const loadJoinJourneys = async () => {
-      try {
-        let res = await API.get(endpoints['join_detail'](JourneyId));
-        setJoinJourneys(res.data);
-      } catch (ex) {
-        console.error(ex);
-      }
-    };
-    loadJoinJourneys();
+  const loadJoinJourneys = useCallback(async () => {
+    try {
+      let res = await API.get(endpoints['join_detail'](JourneyId));
+      setJoinJourneys(res.data);
+    } catch (ex) {
+      console.error(ex);
+    }
   }, [JourneyId]);
 
-  useEffect(() => {
-    const loadJourney = async () => {
-      try {
-        let res = await API.get(endpoints['journeys_detail'](JourneyId));
-        setJourney(res.data);
-        setCommentsClosed(res.data.comments_closed); // Cập nhật trạng thái commentsClosed
-
-      } catch (ex) {
-        console.error(ex);
-      }
-    };
-    loadJourney();
+  const loadJourney = useCallback(async () => {
+    try {
+      let res = await API.get(endpoints['journeys_detail'](JourneyId));
+      setJourney(res.data);
+      setCommentsClosed(res.data.comments_closed);
+    } catch (ex) {
+      console.error(ex);
+    }
   }, [JourneyId]);
+
+  useFocusEffect(
+    useCallback(() => {
+      loadComments();
+      loadImage();
+      loadPlaceVisits();
+      loadJoinJourneys();
+      loadJourney();
+    }, [JourneyId])
+  );
 
   const loadMoreInfo = ({ nativeEvent }) => {
     if (!comments && isCloseToBottom(nativeEvent)) {
@@ -112,7 +108,7 @@ const JourneyDetail = ({ route, navigation }) => {
   };
 
   const handleEditJourney = (item) => {
-   navigation.navigate('UpdateJourney', { JourneyId: item });  
+    navigation.navigate('UpdateJourney', { JourneyId: item });
   };
 
   const handleCompleteJourney = async (item) => {
@@ -120,29 +116,29 @@ const JourneyDetail = ({ route, navigation }) => {
       let token = await AsyncStorage.getItem('access-token');
       let res = await authApi(token).post(endpoints['complete'](item));
       Alert.alert('Success', 'Journey marked as completed.');
-      console.log('Journey marked as completed.'); 
+      console.log('Journey marked as completed.');
     } catch (ex) {
       console.error(ex);
       Alert.alert('Error', 'Failed to marked as completed Journey. Please try again.');
-
     }
-
   };
+
   const handleAvatarPress = (id) => {
     navigation.navigate("ProfileScreen", { "userId": id });
   };
-  const handleCloseComments = async   (item) => {
+
+  const handleCloseComments = async (item) => {
     try {
       let token = await AsyncStorage.getItem('access-token');
       await authApi(token).post(endpoints['close_comments'](item));
       setCommentsClosed(true);
-      Alert.alert('Success', 'Journey closed comments .');
-      console.log('Journey closed comments .'); 
-
+      Alert.alert('Success', 'Journey closed comments.');
+      console.log('Journey closed comments.');
     } catch (ex) {
       console.error(ex);
       Alert.alert('Error', 'Failed to closed comments Journey. Please try again.');
-    }  };
+    }
+  };
 
   if (!journey) {
     return <ActivityIndicator style={styles.loader} size="large" color="#0000ff" />;
@@ -151,12 +147,13 @@ const JourneyDetail = ({ route, navigation }) => {
   return (
     <ScrollView onScroll={loadMoreInfo} style={styles.container}>
       <JourneyDetailItem
-        item={{ ...journey, place_visits: placeVisits, images }}
+        item={{ ...journey, place_visits: placeVisits, images, joinedUsers: joinJourneys.map(j => j.user.id) }}
         onEdit={handleEditJourney}
         onComplete={handleCompleteJourney}
         onCloseComments={handleCloseComments}
         commentsClosed={commentsClosed}
         handleAvatarPress={handleAvatarPress}
+        navigation={navigation}
       />
       {!commentsClosed && (
         <View style={styles.commentSection}>
@@ -180,9 +177,9 @@ const JourneyDetail = ({ route, navigation }) => {
         {comments.length > 0 ? comments.map(c => (
           <Card key={c.id} style={styles.commentCard}>
             <Card.Content style={styles.commentContent}>
-            <TouchableOpacity onPress={() => navigation.navigate('ProfileScreen', { userId: c.user.id })}>
-        <Image source={{ uri: c.user.avatar }} style={styles.avatar} />
-      </TouchableOpacity>
+              <TouchableOpacity onPress={() => navigation.navigate('ProfileScreen', { userId: c.user.id })}>
+                <Image source={{ uri: c.user.avatar }} style={styles.avatar} />
+              </TouchableOpacity>
               <View style={styles.commentTextContainer}>
                 <Text style={styles.commentUsername}>{c.user.username}</Text>
                 <Text style={styles.commentText}>{c.cmt}</Text>
@@ -202,74 +199,6 @@ const JourneyDetail = ({ route, navigation }) => {
       </View>
     </ScrollView>
   );
-  
 };
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    paddingHorizontal: 10,
-    backgroundColor: '#f5f5f5',
-  },
-  loader: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  commentSection: {
-    marginVertical: 10,
-  },
-  commentInput: {
-    marginBottom: 10,
-  },
-  commentButton: {
-    marginBottom: 10,
-  },
-  commentsContainer: {
-    marginVertical: 10,
-  },
-  commentCard: {
-    marginBottom: 10,
-    borderRadius: 10,
-  },
-  commentContent: {
-    flexDirection: 'row',
-  },
-  avatar: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    marginRight: 10,
-  },
-  commentTextContainer: {
-    flex: 1,
-  },
-  commentUsername: {
-    fontWeight: 'bold',
-  },
-  commentText: {
-    fontSize: 16,
-  },
-  commentDate: {
-    fontSize: 12,
-    color: '#777',
-    marginTop: 5,
-  },
-  noComments: {
-    textAlign: 'center',
-    color: '#777',
-    fontStyle: 'italic',
-  },
-  acceptButton: {
-    marginTop: 10,
-    alignSelf: 'flex-start',
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-  },
-  acceptedChip: {
-    marginTop: 10,
-    backgroundColor: '#4CAF50',
-  },
-});
 
 export default JourneyDetail;

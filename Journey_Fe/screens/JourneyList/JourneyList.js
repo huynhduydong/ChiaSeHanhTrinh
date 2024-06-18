@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { View, FlatList, StyleSheet } from 'react-native';
 import API, { endpoints } from '../../configs/API';
 import JourneyItem from '../../components/JourneyItem';
+import SearchJourney from '../../components/SearchJourney';
+import styles from '../../constants/styles';
 
 const JourneyList = ({ route, navigation }) => {
   const [journeys, setJourneys] = useState([]);
@@ -19,9 +21,14 @@ const JourneyList = ({ route, navigation }) => {
     }
   };
 
+  const handleSearchResults = (results) => {
+    setJourneys(results);
+  };
+
   const goToJourneyDetail = (JourneyId) => {
     navigation.navigate("JourneyDetail", { "JourneyId": JourneyId });
   };
+
   const handleAvatarPress = (id) => {
     navigation.navigate("ProfileScreen", { "userId": id });
   };
@@ -29,7 +36,6 @@ const JourneyList = ({ route, navigation }) => {
   const handleLike = async (id) => {
     try {
       await API.post(endpoints['like'](id));
-      // Update the local state to reflect the like
       setJourneys((prevJourneys) =>
         prevJourneys.map((journey) =>
           journey.id === id ? { ...journey, likes_count: journey.likes_count + 1 } : journey
@@ -39,9 +45,8 @@ const JourneyList = ({ route, navigation }) => {
       console.error('Error liking the journey:', error);
     }
   };
- 
+
   const handleComment = (id) => {
-    // Navigate to the comments section or handle comment functionality
     navigation.navigate("JourneyComments", { "JourneyId": id });
   };
 
@@ -61,16 +66,10 @@ const JourneyList = ({ route, navigation }) => {
         data={journeys}
         renderItem={renderItem}
         keyExtractor={(item) => item.id.toString()}
+        ListHeaderComponent={<SearchJourney onSearchResults={handleSearchResults} />} // Add SearchJourney component
       />
     </View>
   );
 };
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#F5F5F5',
-  },
-});
 
 export default JourneyList;

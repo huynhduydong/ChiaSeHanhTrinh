@@ -1,6 +1,7 @@
 apply plugin: "com.android.application"
 apply plugin: "org.jetbrains.kotlin.android"
 apply plugin: "com.facebook.react"
+apply plugin: "com.google.gms.google-services"  // Add this line
 
 /**
  * This is the configuration block to customize your React Native Android app.
@@ -116,6 +117,16 @@ dependencies {
     // implementation 'com.mapbox.mapboxsdk:mapbox-android-sdk:9.6.2'
     // implementation 'com.mapbox.mapboxsdk:mapbox-android-telemetry:8.1.0'
     // implementation project(':@react-native-mapbox-gl_maps')
+
+    // Add the Firebase BoM
+    implementation platform('com.google.firebase:firebase-bom:33.1.0')
+
+    // Add the Firebase Analytics dependency
+    implementation 'com.google.firebase:firebase-analytics'
+
+    // Add other Firebase dependencies as needed, for example:
+    // implementation 'com.google.firebase:firebase-auth'
+    // implementation 'com.google.firebase:firebase-firestore'
 }
 
 apply from: file("../../node_modules/@react-native-community/cli-platform-android/native_modules.gradle"); 

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { View, StyleSheet, TextInput, Button, Text, ScrollView, Alert } from 'react-native';
-import API, { endpoints } from '../configs/API';
+import { View, StyleSheet, TextInput, Text, ScrollView, Alert } from 'react-native';
+import API, { endpoints } from '../../configs/API';
+import { Provider as PaperProvider, Button} from 'react-native-paper';
 
 const AddPlaceVisit = ({ route }) => {
   const { JourneyId } = route.params;
@@ -44,7 +45,6 @@ const AddPlaceVisit = ({ route }) => {
         }
       );
 
-
       if (response.status === 201) {
         Alert.alert('Success', 'Place Visit added successfully');
         setQuery('');
@@ -68,68 +68,82 @@ const AddPlaceVisit = ({ route }) => {
   };
 
   return (
-    <ScrollView style={styles.container}>
-      {/* <Text style={styles.label}>Journey: {journey.name}</Text> */}
+    <PaperProvider>
+    <ScrollView contentContainerStyle={styles.scrollContainer}>
+      <Text style={styles.title}>Thêm điểm đến</Text>
       <TextInput
         style={styles.input}
-        placeholder="Place Visit Name"
+        placeholder="Tên điểm đến"
         value={query}
         onChangeText={(text) => setQuery(text)}
       />
+            <Button mode="contained" onPress={searchLocation} style={styles.saveButton}>
+            Tìm kiếm địa điểm              </Button>
       <TextInput
         style={styles.input}
-        placeholder="Description"
+        placeholder="Mô tả địa điểm"
         value={description}
         onChangeText={(text) => setDescription(text)}
       />
-      <Button title="Search Location" onPress={searchLocation} />
       {location.lat && location.lon && (
         <Text style={styles.label}>Location: {location.lat}, {location.lon}</Text>
       )}
       {address && (
         <Text style={styles.label}>Address: {address}</Text>
       )}
-      <Button title="Add Place Visit" onPress={addPlaceVisit} />
+      <Button mode="contained" onPress={addPlaceVisit} style={styles.saveButton}>
+      Thêm địa điểm
+              </Button>
       {placeVisit && (
         <View style={styles.tableContainer}>
-          <Text style={styles.tableTitle}>Place Visit Information</Text>
-          <View style={styles.tableRow}>
-            <Text style={styles.tableCell}>Latitude</Text>
-            <Text style={styles.tableCell}>{placeVisit.latitude}</Text>
+          <Text style={styles.tableTitle}>Thông tin điểm đến</Text>
+           <View style={styles.tableRow}>
+            <Text style={styles.tableCell}>Tên điểm đến</Text>
+            <Text style={styles.tableCell}>{placeVisit.name}</Text>
           </View>
           <View style={styles.tableRow}>
-            <Text style={styles.tableCell}>Longitude</Text>
-            <Text style={styles.tableCell}>{placeVisit.longitude}</Text>
-          </View>
-          <View style={styles.tableRow}>
-            <Text style={styles.tableCell}>Address</Text>
+            <Text style={styles.tableCell}>Địa chỉ</Text>
             <Text style={styles.tableCell}>{placeVisit.address}</Text>
           </View>
           <View style={styles.tableRow}>
-            <Text style={styles.tableCell}>Description</Text>
+            <Text style={styles.tableCell}>Mô tả</Text>
             <Text style={styles.tableCell}>{placeVisit.description}</Text>
           </View>
         </View>
       )}
     </ScrollView>
+    </PaperProvider>
+
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
+  saveButton: {
+    marginTop: 16,
+    borderRadius: 5,
+    
+  },
+  scrollContainer: {
     flexGrow: 1,
     padding: 16,
-    backgroundColor: '#fff',
+    backgroundColor: '#f8f9fa',
+  },
+  title: {
+    fontSize: 24,
+    marginBottom: 16,
+    textAlign: 'center',
   },
   input: {
     height: 40,
     borderColor: '#ccc',
     borderWidth: 1,
-    marginBottom: 10,
-    paddingHorizontal: 8,
+    marginBottom: 16,
+    paddingLeft: 8,
+    borderRadius: 4,
   },
-  infoContainer: {
-    marginBottom: 20,
+  label: {
+    color: '#333',
+    marginBottom: 10,
   },
   tableContainer: {
     marginTop: 20,
