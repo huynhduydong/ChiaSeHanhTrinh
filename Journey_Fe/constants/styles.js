@@ -7,6 +7,36 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff8e1',  // Màu nền sáng ấm áp
     paddingTop: 16,  // Add some padding to the top
   },
+  ratingSection: {
+    padding: 16,
+    backgroundColor: '#f8f9fa',
+    marginTop: 20,
+  },
+  ratingTitle: {
+    fontSize: 20,
+    marginBottom: 16,
+    textAlign: 'center',
+  },
+  ratingInput: {
+    height: 40,
+    borderColor: '#ccc',
+    borderWidth: 1,
+    marginBottom: 16,
+    paddingLeft: 8,
+    borderRadius: 4,
+  },
+  ratingContentInput: {
+    height: 80,
+    borderColor: '#ccc',
+    borderWidth: 1,
+    marginBottom: 16,
+    paddingLeft: 8,
+    borderRadius: 4,
+  },
+  ratingButton: {
+    marginTop: 16,
+    borderRadius: 5,
+  },
   loader: {
     flex: 1,
     justifyContent: 'center',

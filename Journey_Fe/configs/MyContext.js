@@ -5,12 +5,15 @@ const MyDispatchContext = createContext();
 
 const initialState = {
     user: null,
+    isLoggedIn: false,
 };
 
 const reducer = (state, action) => {
     switch (action.type) {
         case 'login':
-            return { ...state, user: action.payload ,isLoggedIn: true};
+            return { ...state, user: action.payload, isLoggedIn: true };
+        case 'logout':
+            return { ...state, user: null, isLoggedIn: false };
         default:
             return state;
     }

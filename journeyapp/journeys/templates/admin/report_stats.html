@@ -1,0 +1,25 @@
+{% extends "admin/base_site.html" %}
+
+{% block content %}
+<h1>User Report Statistics</h1>
+<table>
+    <thead>
+        <tr>
+            <th>User</th>
+            <th>Report Count</th>
+            <th>Actions</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for user in users %}
+        <tr>
+            <td>{{ user.username }}</td>
+            <td>{{ user.report_count }}</td>
+            <td>
+                <a href="{% url 'admin_user_report_details' user.id %}">View Reports</a>
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}

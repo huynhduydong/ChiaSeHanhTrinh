@@ -21,6 +21,7 @@ const theme = {
     dark: '#343a40',  // Màu tối
     light: '#f8f9fa',  // Màu sáng
     muted: '#6c757d',  // Màu muted (xám nhạt)
+
   },
 };
 

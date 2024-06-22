@@ -34,7 +34,7 @@ const UserJourneysScreen = ({ route, navigation }) => {
             <Card style={styles.card}>
                 <Card.Content style={styles.cardContent}>
                     <Image
-                        source={{ uri: "http://localhost:8000/static" + item.main_image || defaultAvatar }}
+                        source={{ uri: "http://localhost:8000/static" + item.main_image}}
                         style={styles.image}
                     />
                     <View style={styles.textContainer}>

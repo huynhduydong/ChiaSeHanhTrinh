@@ -17,12 +17,14 @@ const JourneyItem = ({ item, goToJourneyDetail, handleAvatarPress, onLike, onCom
       <Icon name="ellipsis-h" size={20} color="#000" />
     </View>
     <Text style={styles.content}>{item.name}</Text>
+    <Text>Ngày khởi hành: {moment(item.start_date).format('DD-MM-YYYY')}</Text>
+    <Text>Ngày kết thúc: {moment(item.end_date).format('DD-MM-YYYY')}</Text>
     <Image source={{ uri: item.main_image }} style={styles.mainImage} />
-    <Text>Lượt thích            {item.comments_count} bình luận                 {item.join_count} tham gia</Text>
+    <Text>           {item.comments_count} bình luận                          {item.join_count} tham gia</Text>
     <View style={styles.actions}>
-      <TouchableOpacity onPress={onLike}>
+      {/* <TouchableOpacity onPress={onLike}>
         <Icon name="thumbs-up" size={20} color="#007BFF" />
-      </TouchableOpacity>
+      </TouchableOpacity> */}
       <TouchableOpacity onPress={onComment}>
         <Icon name="comment" size={20} color="#007BFF" />
       </TouchableOpacity>

@@ -1,9 +1,11 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useContext } from 'react';
 import { View, Text, TextInput, StyleSheet, Image, ActivityIndicator, ScrollView, Alert, Button, TouchableOpacity } from 'react-native';
 import { authApi, endpoints } from '../../configs/API';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import ImagePicker from 'react-native-image-crop-picker';
+import { useNavigation } from '@react-navigation/native';
+import { MyDispatchContext } from '../../configs/MyContext';
 
 const ProfileCurrentUser = () => {
   const [profile, setProfile] = useState(null);
@@ -14,6 +16,9 @@ const ProfileCurrentUser = () => {
   const [lastName, setLastName] = useState('');
   const [email, setEmail] = useState('');
   const [avatar, setAvatar] = useState(null);
+
+  const dispatch = useContext(MyDispatchContext);
+  const navigation = useNavigation();
 
   useEffect(() => {
     const loadProfile = async () => {
@@ -57,7 +62,6 @@ const ProfileCurrentUser = () => {
         },
       });
 
-      // Cập nhật trạng thái avatar sau khi cập nhật thành công
       setProfile(res.data);
       setAvatar(res.data.avatar);
       setIsEditing(false);
@@ -85,6 +89,15 @@ const ProfileCurrentUser = () => {
     } catch (error) {
       Alert.alert('Error', 'Unable to select image');
     }
+  };
+
+  const handleLogout = async () => {
+    await AsyncStorage.removeItem('access-token');
+    await AsyncStorage.removeItem('user');
+
+    dispatch({ type: 'logout' });
+
+    navigation.navigate('LoginMain');
   };
 
   if (loading) {
@@ -134,10 +147,10 @@ const ProfileCurrentUser = () => {
           editable={isEditing}
         />
 
-        <Text style={styles.label}>Average Rating</Text>
+        <Text style={styles.label}>Đánh giá độ tin cậy (Rating)</Text>
         <TextInput style={styles.input} value={String(profile.average_rating)} editable={false} />
 
-        <Text style={styles.label}>Journey Count</Text>
+        <Text style={styles.label}>Số hành trình đã đăng</Text>
         <TextInput style={styles.input} value={String(profile.journey_count)} editable={false} />
       </View>
       {isEditing && (
@@ -148,8 +161,9 @@ const ProfileCurrentUser = () => {
         />
       )}
       <Button 
-        title="Đăng xuất" 
-        color="#FF0000"
+        title="Logout" 
+        onPress={handleLogout} 
+        color="red"
       />
     </ScrollView>
   );

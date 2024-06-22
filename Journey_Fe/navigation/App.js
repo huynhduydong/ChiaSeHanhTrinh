@@ -21,6 +21,7 @@ import PlaceVisitDetail from '../screens/PlaceVisit/PlaceVisitDetail';
 import AddImageJourney from '../screens/ImageJourney/AddImageJourney';
 import UpdatePlaceVisit from '../screens/PlaceVisit/UpdatePlaceVisit';
 import ImageJourneyDetail from '../screens/ImageJourney/ImageJourneyDetail';
+import AuthStack from './AppStack';
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -49,21 +50,21 @@ function MainStackNavigator({ navigation, route }) {
   return (
     <Stack.Navigator>
       <Stack.Screen name="JourneyList" component={JourneyList} options={{ headerShown: false }} />
-      <Stack.Screen name="AddJourney" component={AddJourney} options={{ headerTitle: '', headerBackTitleVisible: false }} />
-      <Stack.Screen name="AddPlaceVisit" component={AddPlaceVisit} options={{ headerTitle: '', headerBackTitleVisible: false }} />
+      <Stack.Screen name="AddJourney" component={AddJourney} options={{ headerTitle: 'Thêm Hành Trình', headerBackTitleVisible: false }} />
+      <Stack.Screen name="AddPlaceVisit" component={AddPlaceVisit} options={{ headerTitle: 'Thêm Địa Điểm', headerBackTitleVisible: false }} />
       <Stack.Screen name="UserJourneysScreen" component={UserJourneysScreen} options={{ headerShown: false }} />
-      <Stack.Screen name="UpdateJourney" component={UpdateJourney} options={{ headerTitle: '', headerBackTitleVisible: false }} />
-      <Stack.Screen name="PlaceVisitDetail" component={PlaceVisitDetail} options={{ headerTitle: '', headerBackTitleVisible: false }} />
-      <Stack.Screen name="AddImageJourney" component={AddImageJourney} options={{ headerTitle: '', headerBackTitleVisible: false }} />
-      <Stack.Screen name="JourneyDetail" component={JourneyDetail} options={{ headerTitle: '', headerBackTitleVisible: false }} />
-      <Stack.Screen name="ProfileScreen" component={ProfileScreen} options={{ headerTitle: '', headerBackTitleVisible: false }} />
-      <Stack.Screen name="UpdatePlaceVisit" component={UpdatePlaceVisit} options={{ headerTitle: '', headerBackTitleVisible: false }} />
-      <Stack.Screen name="ImageJourneyDetail" component={ImageJourneyDetail} options={{ headerTitle: '', headerBackTitleVisible: false }} />
+      <Stack.Screen name="UpdateJourney" component={UpdateJourney} options={{ headerTitle: 'Cập Nhật Hành Trình', headerBackTitleVisible: false }} />
+      <Stack.Screen name="PlaceVisitDetail" component={PlaceVisitDetail} options={{ headerTitle: 'Chi Tiết Địa Điểm', headerBackTitleVisible: false }} />
+      <Stack.Screen name="AddImageJourney" component={AddImageJourney} options={{ headerTitle: 'Thêm Hình Ảnh', headerBackTitleVisible: false }} />
+      <Stack.Screen name="JourneyDetail" component={JourneyDetail} options={{ headerTitle: 'Chi Tiết Hành Trình', headerBackTitleVisible: false }} />
+      <Stack.Screen name="ProfileScreen" component={ProfileScreen} options={{ headerTitle: 'Hồ Sơ', headerBackTitleVisible: false }} />
+      <Stack.Screen name="UpdatePlaceVisit" component={UpdatePlaceVisit} options={{ headerTitle: 'Cập Nhật Địa Điểm', headerBackTitleVisible: false }} />
+      <Stack.Screen name="ImageJourneyDetail" component={ImageJourneyDetail} options={{ headerTitle: 'Chi Tiết Hình Ảnh', headerBackTitleVisible: false }} />
     </Stack.Navigator>
   );
 }
 
-function LoginMain() {
+function LoginStackNavigator() {
   return (
     <Stack.Navigator screenOptions={{ headerShown: false }}>
       <Stack.Screen name="LoginScreen" component={LoginScreen} />
@@ -77,7 +78,7 @@ function AppTabs() {
 
   return (
     <Tab.Navigator
-      initialRouteName={isLoggedIn ? "Home" : "LoginMain"}
+      initialRouteName={isLoggedIn ? 'Home' : 'LoginMain'}
       screenOptions={({ route }) => ({
         headerShown: false,
         tabBarIcon: ({ focused, color, size }) => {
@@ -91,10 +92,10 @@ function AppTabs() {
             iconName = focused ? 'list' : 'list-outline';
           } else if (route.name === 'LoginMain') {
             iconName = focused ? 'log-in' : 'log-in-outline';
-          } else if (route.name === 'ActivityLog') {
-            iconName = focused ? 'time' : 'time-outline';
           } else if (route.name === 'Profile') {
             iconName = focused ? 'person' : 'person-outline';
+          }  else if (route.name === 'Chat') {
+            iconName = focused ? 'chatbox' : 'chatbox-outline';
           }
 
           return <Icon name={iconName} size={size} color={color} />;
@@ -103,12 +104,18 @@ function AppTabs() {
         tabBarInactiveTintColor: 'gray',
       })}
     >
-      <Tab.Screen name="Home" component={MainStackNavigator} />
-      <Tab.Screen name="AddJourney" component={AddJourney} />
-      <Tab.Screen name="UserJourneys" component={UserJourneysScreen} />
-      {!isLoggedIn && <Tab.Screen name="LoginMain" component={LoginMain} />}
-      <Tab.Screen name="ActivityLog" component={ActivityLog} />
-      <Tab.Screen name="Profile" component={ProfileCurrentUser} />
+      {isLoggedIn ? (
+        <>
+          <Tab.Screen name="Home" component={MainStackNavigator} options={{ tabBarLabel: 'Trang Chủ' }} />
+          <Tab.Screen name="AddJourney" component={AddJourney} options={{ tabBarLabel: 'Thêm Hành Trình' }} />
+          <Tab.Screen name="UserJourneys" component={UserJourneysScreen} options={{ tabBarLabel: 'Danh sách' }} />
+          <Tab.Screen name="Chat" component={AuthStack} options={{ tabBarLabel: 'Chat' }} />
+
+          <Tab.Screen name="Profile" component={ProfileCurrentUser} options={{ tabBarLabel: 'Hồ Sơ' }} />
+        </>
+      ) : (
+        <Tab.Screen name="LoginMain" component={LoginStackNavigator} options={{ tabBarLabel: 'Đăng Nhập' }} />
+      )}
     </Tab.Navigator>
   );
 }

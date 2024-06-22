@@ -56,13 +56,13 @@ INSTALLED_APPS = [
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'oauth2_provider.contrib.rest_framework.OAuth2Authentication',
-        'chat.authentication.FirebaseAuthentication',
-
     )
 }
 CKEDITOR_UPLOAD_PATH = "ckeditor/images/"
 cred = credentials.Certificate("firebase-credentials.json")
-firebase_admin.initialize_app(cred)
+firebase_admin.initialize_app(cred, {
+    'databaseURL': 'https://chatappjourney-default-rtdb.firebaseio.com/'
+})
 import cloudinary
 cloudinary.config(
     cloud_name="dxodnq83l",
@@ -103,6 +103,12 @@ TEMPLATES = [
         },
     },
 ]
+EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+EMAIL_HOST = 'smtp.gmail.com'
+EMAIL_PORT = 587
+EMAIL_USE_TLS = True
+EMAIL_HOST_USER = 'huynhduydong92@gmail.com'
+EMAIL_HOST_PASSWORD = 'Donglon12.'
 
 WSGI_APPLICATION = 'journeyapp.wsgi.application'
 

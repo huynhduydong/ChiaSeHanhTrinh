@@ -39,7 +39,7 @@ class UserSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ['id', 'username', 'avatar', 'first_name', 'last_name', 'email', 'password'
+        fields = ['id', 'username', 'avatar', 'first_name', 'last_name', 'email', 'password','role'
                   ]
 
 
@@ -234,3 +234,13 @@ class RatingSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError("User đã rating hành trình này rồi.")
 
         return data
+
+
+from django.utils import timezone
+
+class MessageSerializer(serializers.Serializer):
+    message = serializers.CharField(max_length=1000)
+    user = serializers.CharField(max_length=100, required=False)  # Đặt required=False để không bắt buộc từ client
+    timestamp = serializers.DateTimeField(default=timezone.now)
+    chat_id = serializers.CharField(max_length=100, required=False)
+    type = serializers.CharField(max_length=20, required=False)

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Button, Text, StyleSheet, TouchableOpacity, ScrollView, FlatList, Modal } from 'react-native';
+import { View, Button, Text, StyleSheet, TouchableOpacity, ScrollView, FlatList, Modal, ActivityIndicator } from 'react-native';
 import { SearchBar } from 'react-native-elements';
 import DropDownPicker from 'react-native-dropdown-picker';
 import DateTimePickerModal from 'react-native-modal-datetime-picker';
@@ -56,6 +56,9 @@ const SearchJourney = ({ onSearchResults }) => {
     const [isDatePickerVisible, setDatePickerVisibility] = useState(false);
     const [currentPicker, setCurrentPicker] = useState('');
     const [isModalVisible, setModalVisible] = useState(false);
+    const [loading, setLoading] = useState(false);
+    const [currentPage, setCurrentPage] = useState(1);
+    const [totalPages, setTotalPages] = useState(1);
 
     const showDatePicker = (pickerType) => {
         setCurrentPicker(pickerType);
@@ -80,12 +83,12 @@ const SearchJourney = ({ onSearchResults }) => {
             try {
                 let res = await API.get(endpoints['tags']);
                 const tagsData = res.data.map(tag => ({ label: tag.name, value: tag.id }));
-                
+
                 // Lọc các tag trùng lặp
                 const uniqueTags = tagsData.filter((tag, index, self) =>
                     index === self.findIndex((t) => t.value === tag.value)
                 );
-                
+
                 setTags(uniqueTags);
             } catch (ex) {
                 console.error('Error fetching tags:', ex);
@@ -93,7 +96,6 @@ const SearchJourney = ({ onSearchResults }) => {
         };
         loadTags();
     }, []);
-    
 
     const handleTagPress = (tag) => {
         setSelectedTags(prevSelectedTags => {
@@ -105,17 +107,18 @@ const SearchJourney = ({ onSearchResults }) => {
         });
     };
 
-    const handleSearch = async () => {
+    const fetchSearchResults = async (page = 1) => {
+        setLoading(true);
         try {
-            let params = {};
-
-            if (searchType === 'journey') {
-                params = { keyword: searchText, tags: selectedTags, start_date: startDate, end_date: endDate };
-            } else if (searchType === 'username') {
-                params = { username: searchText, tags: selectedTags, start_date: startDate, end_date: endDate };
-            } else if (searchType === 'place') {
-                params = { place_name: searchText, tags: selectedTags, start_date: startDate, end_date: endDate };
-            }
+            let params = {
+                page,
+                keyword: searchType === 'journey' ? searchText : undefined,
+                username: searchType === 'username' ? searchText : undefined,
+                place_name: searchType === 'place' ? searchText : undefined,
+                tags: selectedTags,
+                start_date: startDate,
+                end_date: endDate,
+            };
 
             let res = await API.get(endpoints['search'], {
                 params,
@@ -123,9 +126,27 @@ const SearchJourney = ({ onSearchResults }) => {
                     return qs.stringify(params, { arrayFormat: 'repeat' });
                 }
             });
-            onSearchResults(res.data);
+
+            const results = page === 1 ? res.data.results : [...results, ...res.data.results];
+            onSearchResults(results, res.data.count);
+            setTotalPages(Math.ceil(res.data.count / 6));
         } catch (ex) {
-            console.error('Error fetching Journey:', ex);
+            console.error('Error fetching search results:', ex);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleSearch = () => {
+        setCurrentPage(1);
+        fetchSearchResults(1);
+    };
+
+    const handleLoadMore = () => {
+        if (currentPage < totalPages && !loading) {
+            const nextPage = currentPage + 1;
+            setCurrentPage(nextPage);
+            fetchSearchResults(nextPage);
         }
     };
 
@@ -160,7 +181,7 @@ const SearchJourney = ({ onSearchResults }) => {
                 onFocus={() => setOpenSearchType(false)}
             />
             <>
-            <Text style={styles.label}>Chọn loại hành trình mong muốn</Text>
+                <Text style={styles.label}>Chọn loại hành trình mong muốn</Text>
                 <TouchableOpacity style={styles.dropdown} onPress={() => setModalVisible(true)}>
                     <Text style={styles.dropdownText}>Chọn tag</Text>
                 </TouchableOpacity>
@@ -194,8 +215,8 @@ const SearchJourney = ({ onSearchResults }) => {
                     onCancel={hideDatePicker}
                 />
             </>
-
             <Button title="Search" onPress={handleSearch} color="#FF6347" />
+            {loading && <ActivityIndicator size="large" color="#0000ff" />}
         </ScrollView>
     );
 };

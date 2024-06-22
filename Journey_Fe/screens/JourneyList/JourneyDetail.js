@@ -18,6 +18,10 @@ const JourneyDetail = ({ route, navigation }) => {
   const [images, setImage] = useState([]);
   const [joinJourneys, setJoinJourneys] = useState([]);
   const [commentsClosed, setCommentsClosed] = useState(false);
+  
+  // State mới cho đánh giá hành trình
+  const [rating, setRating] = useState(0);
+  const [ratingContent, setRatingContent] = useState("");
 
   const loadComments = useCallback(async () => {
     try {
@@ -93,6 +97,21 @@ const JourneyDetail = ({ route, navigation }) => {
     }
   };
 
+  const addRating = async () => {
+    try {
+      let token = await AsyncStorage.getItem('access-token');
+      let res = await authApi(token).post(endpoints['rating'], {
+        'journey': JourneyId,
+        'rate': rating,
+        'content': ratingContent,
+      });
+      Alert.alert('Thành công', 'Đánh giá của bạn đã được gửi.');
+    } catch (ex) {
+      console.error(ex);
+      Alert.alert('Lỗi', 'Không thể gửi đánh giá. Vui lòng thử lại.');
+    }
+  };
+
   const acceptJoinRequest = async (userId) => {
     try {
       let token = await AsyncStorage.getItem('access-token');
@@ -115,11 +134,11 @@ const JourneyDetail = ({ route, navigation }) => {
     try {
       let token = await AsyncStorage.getItem('access-token');
       let res = await authApi(token).post(endpoints['complete'](item));
-      Alert.alert('Success', 'Journey marked as completed.');
+      Alert.alert('Thành công', 'Hành trình được đánh dấu là đã hoàn thành.');
       console.log('Journey marked as completed.');
     } catch (ex) {
       console.error(ex);
-      Alert.alert('Error', 'Failed to marked as completed Journey. Please try again.');
+      Alert.alert('Lỗi', 'Không thể đánh dấu là Hành trình đã hoàn thành. Vui lòng thử lại.');
     }
   };
 
@@ -132,11 +151,11 @@ const JourneyDetail = ({ route, navigation }) => {
       let token = await AsyncStorage.getItem('access-token');
       await authApi(token).post(endpoints['close_comments'](item));
       setCommentsClosed(true);
-      Alert.alert('Success', 'Journey closed comments.');
+      Alert.alert('Thành công', 'Đã đóng bình luận của hành trình');
       console.log('Journey closed comments.');
     } catch (ex) {
       console.error(ex);
-      Alert.alert('Error', 'Failed to closed comments Journey. Please try again.');
+      Alert.alert('Lỗi', 'Không thể đóng bình luận Hành trình. Vui lòng thử lại.');
     }
   };
 
@@ -197,8 +216,34 @@ const JourneyDetail = ({ route, navigation }) => {
           <Text style={styles.noComments}>Chưa có bình luận nào.</Text>
         )}
       </View>
+      
+      {/* Thêm form đánh giá hành trình */}
+      <View style={styles.ratingSection}>
+        <Text style={styles.ratingTitle}>Đánh giá hành trình</Text>
+        <TextInput
+          label="Đánh giá"
+          value={rating.toString()}
+          onChangeText={text => setRating(parseInt(text))}
+          keyboardType="numeric"
+          mode="outlined"
+          style={styles.ratingInput}
+        />
+        <TextInput
+          multiline={true}
+          label="Nội dung đánh giá..."
+          value={ratingContent}
+          onChangeText={setRatingContent}
+          mode="outlined"
+          style={styles.ratingContentInput}
+        />
+        <Button mode="contained" onPress={addRating} style={styles.ratingButton}>
+          Gửi đánh giá
+        </Button>
+      </View>
     </ScrollView>
   );
 };
+
+
 
 export default JourneyDetail;

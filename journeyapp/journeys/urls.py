@@ -25,5 +25,12 @@ urlpatterns = [
     path('add_journey/<int:journey_id>/add_place_visit/', views.AddPlaceVisitView.as_view(), name='add_place_visit'),
     path('reports/', views.ReportCreateView.as_view(), name='report-create'),
     path('rating/', views.RatingCreateView.as_view(), name='rating-create'),
+    path('messages/<str:chat_id>/', views.MessageList.as_view(), name='message-list'),
+    path('chat/', views.ChatView.as_view(), name='chat'),
+    path('admin/report-stats/', views.report_stats, name='admin_report_stats'),
+    path('admin/user/<int:user_id>/reports/', views.user_report_details, name='admin_user_report_details'),
+    path('admin/user/<int:user_id>/deactivate/', views.deactivate_user, name='admin_deactivate_user'),
+    path('send_verification_email/<int:user_id>/', views.send_verification_email, name='send_verification_email'),
+    path('reset/<uidb64>/<token>/', views.CustomPasswordResetConfirmView.as_view(), name='password_reset_confirm'),
 
 ]

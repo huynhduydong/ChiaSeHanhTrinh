@@ -1,0 +1,30 @@
+{% extends "admin/base_site.html" %}
+
+{% block content %}
+<h1>Reports for {{ user.username }}</h1>
+<table>
+    <thead>
+        <tr>
+            <th>Reporter</th>
+            <th>Reason</th>
+            <th>Created Date</th>
+            <th>Active</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for report in reports %}
+        <tr>
+            <td>{{ report.reporter.username }}</td>
+            <td>{{ report.reason }}</td>
+            <td>{{ report.created_date }}</td>
+            <td>{{ report.active }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+<form method="post" action="{% url 'admin_deactivate_user' user.id %}">
+    {% csrf_token %}
+    <button type="submit">Deactivate User</button>
+</form>
+{% endblock %}

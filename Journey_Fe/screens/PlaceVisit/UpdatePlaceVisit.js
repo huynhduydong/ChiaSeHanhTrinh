@@ -8,16 +8,23 @@ const UpdatePlaceVisit = ({ route, navigation }) => {
   const [placeVisits, setPlaceVisits] = useState([]);
 
   useEffect(() => {
+    console.log('JourneyId:', JourneyId); // Log JourneyId
     fetchPlaceVisits();
   }, [JourneyId]);
 
   const fetchPlaceVisits = async () => {
     try {
       let res = await API.get(endpoints['place_visits'](JourneyId));
-      setPlaceVisits(res.data);
+      console.log('API response:', res.data); // Log phản hồi API
+      if (res.data && Array.isArray(res.data.results)) {
+        setPlaceVisits(res.data.results);
+      } else {
+        console.error('Phản hồi API không chứa mảng results:', res.data);
+        setPlaceVisits([]);
+      }
     } catch (error) {
-      console.error('Error fetching place visits:', error);
-      Alert.alert('Error', 'Failed to load place visits. Please try again.');
+      console.error('Lỗi khi lấy thông tin địa điểm:', error);
+      Alert.alert('Lỗi', 'Không thể tải các địa điểm. Vui lòng thử lại.');
     }
   };
 
@@ -35,11 +42,11 @@ const UpdatePlaceVisit = ({ route, navigation }) => {
           )
         );
       } else {
-        Alert.alert('Location not found', 'Please try another search query.');
+        Alert.alert('Không tìm thấy địa điểm', 'Vui lòng thử lại với từ khóa khác.');
       }
     } catch (error) {
-      console.error('Error fetching location:', error);
-      Alert.alert('Error', 'Failed to fetch location. Please try again.');
+      console.error('Lỗi khi tìm kiếm địa điểm:', error);
+      Alert.alert('Lỗi', 'Không thể tìm kiếm địa điểm. Vui lòng thử lại.');
     }
   };
 
@@ -48,14 +55,14 @@ const UpdatePlaceVisit = ({ route, navigation }) => {
     try {
       const response = await API.patch(`/place_visit/${id}`, placeVisit);
       if (response.status === 200) {
-        Alert.alert('Success', 'Place visit updated successfully');
-        fetchPlaceVisits();  // Refresh the list after update
+        Alert.alert('Thành công', 'Cập nhật địa điểm thành công');
+        fetchPlaceVisits();  // Làm mới danh sách sau khi cập nhật
       } else {
-        Alert.alert('Error', 'Failed to update place visit. Please try again.');
+        Alert.alert('Lỗi', 'Không thể cập nhật địa điểm. Vui lòng thử lại.');
       }
     } catch (error) {
-      console.error('Error updating place visit:', error);
-      Alert.alert('Error', 'Failed to update place visit. Please try again.');
+      console.error('Lỗi khi cập nhật địa điểm:', error);
+      Alert.alert('Lỗi', 'Không thể cập nhật địa điểm. Vui lòng thử lại.');
     }
   };
 
@@ -70,7 +77,7 @@ const UpdatePlaceVisit = ({ route, navigation }) => {
   return (
     <PaperProvider>
       <ScrollView contentContainerStyle={styles.scrollContainer}>
-        <Text style={styles.title}>Manage Place Visits</Text>
+        <Text style={styles.title}>Quản lý các điểm đến</Text>
         {placeVisits.map((placeVisit) => (
           <View key={placeVisit.id} style={styles.placeVisitContainer}>
             <TextInput
@@ -93,8 +100,13 @@ const UpdatePlaceVisit = ({ route, navigation }) => {
             <Button mode="contained" onPress={() => handleUpdate(placeVisit.id)} style={styles.updateButton}>
               Cập nhật địa điểm
             </Button>
+            
           </View>
+          
         ))}
+        <Button mode="contained" onPress={() => navigation.navigate('UserJourneysScreen')} style={styles.searchButton}>
+              Hoàn Thành
+            </Button>
       </ScrollView>
     </PaperProvider>
   );

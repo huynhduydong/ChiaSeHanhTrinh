@@ -8,7 +8,15 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import HTML from 'react-native-render-html';
 import styles from '../constants/styles';
 
-const JourneyDetailItem = ({ item, onEdit, onComplete, onCloseComments, commentsClosed, handleAvatarPress, navigation }) => {
+const JourneyDetailItem = ({
+  item,
+  onEdit = () => {},
+  onComplete = () => {},
+  onCloseComments = () => {},
+  commentsClosed = false,
+  handleAvatarPress = () => {},
+  navigation
+}) => {
   const [isModalVisible, setModalVisible] = useState(false);
   const [currentUser, setCurrentUser] = useState(null);
 
@@ -31,13 +39,15 @@ const JourneyDetailItem = ({ item, onEdit, onComplete, onCloseComments, comments
   const handlePlaceVisitPress = (placeVisit) => {
     navigation.navigate('PlaceVisitDetail', { placeVisit });
   };
+
   const handleImagePress = (imageId) => {
     navigation.navigate('ImageJourneyDetail', { imageJourneyId: imageId });
   };
+
   const onAddImage = (journeyId) => {
     navigation.navigate('AddImageJourney', { journeyId });
+  };
 
-  }
   const isWithinDateRange = () => {
     const now = moment();
     return now.isBetween(item.start_date, item.end_date, null, '[]');
@@ -47,8 +57,8 @@ const JourneyDetailItem = ({ item, onEdit, onComplete, onCloseComments, comments
     if (!currentUser) return false;
     const isOwner = currentUser.id === item.user_journey.id;
     const isParticipant = item.joinedUsers && item.joinedUsers.includes(currentUser.id);
-    return (isOwner || isParticipant) ;
-  };  
+    return (isOwner || isParticipant);
+  };
 
   return (
     <Card style={styles.card}>
@@ -106,7 +116,7 @@ const JourneyDetailItem = ({ item, onEdit, onComplete, onCloseComments, comments
           )}
         </View>
         {canAddImage() && (
-          <Button mode="contained" onPress={() => onAddImage(item.id)}  style={styles.addButton}
+          <Button mode="contained" onPress={() => onAddImage(item.id)} style={styles.addButton}
           labelStyle={styles.addButtonText} >
             Thêm hình ảnh của hành trình
           </Button>

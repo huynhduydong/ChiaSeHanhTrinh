@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, FlatList, StyleSheet } from 'react-native';
+import { View, FlatList, StyleSheet, ActivityIndicator } from 'react-native';
 import API, { endpoints } from '../../configs/API';
 import JourneyItem from '../../components/JourneyItem';
 import SearchJourney from '../../components/SearchJourney';
@@ -7,22 +7,36 @@ import styles from '../../constants/styles';
 
 const JourneyList = ({ route, navigation }) => {
   const [journeys, setJourneys] = useState([]);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [loading, setLoading] = useState(false);
+  const [isSearching, setIsSearching] = useState(false);
 
   useEffect(() => {
-    fetchJourneys();
-  }, []);
+    if (!isSearching) {
+      fetchJourneys(currentPage);
+    }
+  }, [currentPage, isSearching]);
 
-  const fetchJourneys = async () => {
+  const fetchJourneys = async (page) => {
+    if (loading) return;
+
+    setLoading(true);
     try {
-      const response = await API.get(endpoints['journeys']);
-      setJourneys(response.data);
+      const response = await API.get(`${endpoints['journeys']}?page=${page}`);
+      setJourneys((prevJourneys) => [...prevJourneys, ...response.data.results]);
+      setTotalPages(Math.ceil(response.data.count / 6));  // Assuming 6 items per page
     } catch (error) {
       console.error('Error fetching journeys:', error);
+    } finally {
+      setLoading(false);
     }
   };
 
-  const handleSearchResults = (results) => {
+  const handleSearchResults = (results, totalResults) => {
+    setIsSearching(true);
     setJourneys(results);
+    setTotalPages(Math.ceil(totalResults / 6));
   };
 
   const goToJourneyDetail = (JourneyId) => {
@@ -55,10 +69,16 @@ const JourneyList = ({ route, navigation }) => {
       item={item}
       goToJourneyDetail={goToJourneyDetail}
       handleAvatarPress={handleAvatarPress}
-      onLike={handleLike}
+      // onLike={handleLike}
       onComment={handleComment}
     />
   );
+
+  const handleLoadMore = () => {
+    if (currentPage < totalPages && !isSearching) {
+      setCurrentPage(currentPage + 1);
+    }
+  };
 
   return (
     <View style={styles.container}>
@@ -66,7 +86,10 @@ const JourneyList = ({ route, navigation }) => {
         data={journeys}
         renderItem={renderItem}
         keyExtractor={(item) => item.id.toString()}
-        ListHeaderComponent={<SearchJourney onSearchResults={handleSearchResults} />} // Add SearchJourney component
+        ListHeaderComponent={<SearchJourney onSearchResults={handleSearchResults} />}
+        ListFooterComponent={loading && <ActivityIndicator size="large" color="#0000ff" />}
+        onEndReached={handleLoadMore}
+        onEndReachedThreshold={0.5}
       />
     </View>
   );

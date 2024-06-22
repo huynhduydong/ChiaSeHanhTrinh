@@ -1,4 +1,18 @@
+import requests
+from django.contrib import messages
+from django.contrib.admin.models import LogEntry
+from django.contrib.admin.views.decorators import staff_member_required
 from django.contrib.auth import authenticate
+from django.contrib.auth.tokens import default_token_generator
+from django.contrib.auth.views import PasswordResetConfirmView
+from django.core.mail import send_mail
+from django.http import HttpResponse
+from django.shortcuts import get_object_or_404, render, redirect
+from django.template.loader import render_to_string
+from django.urls import reverse, reverse_lazy
+from django.utils.encoding import force_bytes
+from django.utils.http import urlsafe_base64_encode
+from firebase_admin import db
 from rest_framework import generics, viewsets, permissions, status
 from rest_framework.decorators import action
 from rest_framework.exceptions import PermissionDenied
@@ -9,10 +23,12 @@ from rest_framework.views import APIView
 from rest_framework.viewsets import ViewSet
 from rest_framework.parsers import MultiPartParser, FormParser
 
+from journeys.firebase_utils import create_custom_token
+from journeys.paginators import StandardResultsSetPagination, LargeResultsSetPagination
 from journeys import serializers, perms
 from journeys.models import *
 from journeys.serializers import UserSerializer, PlaceVisitSerializer, ReportSerializer, LoginSerializer, \
-    UserRegisterSerializer, UserProfileSerializer, TagSerializer, RatingSerializer
+    UserRegisterSerializer, UserProfileSerializer, TagSerializer, RatingSerializer, MessageSerializer
 
 
 class AddJourneyViewSet(generics.CreateAPIView):
@@ -34,17 +50,17 @@ class AddJourneyViewSet(generics.CreateAPIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
-class TagViewSet(viewsets.ViewSet,generics.ListAPIView):
+class TagViewSet(viewsets.ViewSet, generics.ListAPIView):
     queryset = Tag.objects.all()
     serializer_class = serializers.TagSerializer
 
 
 class JourneyViewSet(viewsets.ViewSet, generics.ListAPIView):
-    queryset = Journey.objects.all()
     serializer_class = serializers.JourneySerializer
+    pagination_class = StandardResultsSetPagination
 
     def get_queryset(self):
-        return Journey.objects.active()
+        return Journey.objects.active().order_by('created_date')
 
     def get_permissions(self):
         if self.action in ['journeys']:
@@ -71,6 +87,13 @@ class JourneyViewSet(viewsets.ViewSet, generics.ListAPIView):
             queryset = queryset.filter_by_end_date_range(start_date, end_date)
         if place_name:
             queryset = queryset.search_by_place_name(place_name)
+
+        queryset = queryset.order_by('created_date')
+
+        page = self.paginate_queryset(queryset)
+        if page is not None:
+            serializer = self.get_serializer(page, many=True)
+            return self.get_paginated_response(serializer.data)
 
         serializer = self.get_serializer(queryset, many=True)
         return Response(serializer.data)
@@ -145,7 +168,12 @@ class JourneyDetailViewSet(viewsets.ViewSet, generics.RetrieveAPIView):
     def get_comments(self, request, pk):
         if request.method == 'GET':
             comments = self.get_object().comment_set.filter(is_deleted=False).select_related('user').all()
-            return Response(serializers.CommentSerializer(comments, many=True).data, status=status.HTTP_200_OK)
+            page = self.paginate_queryset(comments)
+            if page is not None:
+                serializer = serializers.CommentSerializer(page, many=True)
+                return self.get_paginated_response(serializer.data)
+            serializer = serializers.CommentSerializer(comments, many=True)
+            return Response(serializer.data, status=status.HTTP_200_OK)
         elif request.method == 'POST':
             c = Comment.objects.create(user=request.user, journey=self.get_object(), cmt=request.data.get('cmt'))
 
@@ -164,8 +192,12 @@ class JourneyDetailViewSet(viewsets.ViewSet, generics.RetrieveAPIView):
 
         if request.method == 'GET':
             join_requests = journey.joinjourney_set.select_related('user').all()
-            return Response(serializers.JoinJourneySerializer(join_requests, many=True).data, status=status.HTTP_200_OK)
-
+            page = self.paginate_queryset(join_requests)
+            if page is not None:
+                serializer = serializers.JoinJourneySerializer(page, many=True)
+                return self.get_paginated_response(serializer.data)
+            serializer = serializers.JoinJourneySerializer(join_requests, many=True)
+            return Response(serializer.data, status=status.HTTP_200_OK)
         elif request.method == 'POST':
             if journey.user_journey != request.user:
                 return Response({'detail': 'Chỉ chủ sở hữu của hành trình mới có thể duyệt yêu cầu tham gia.'},
@@ -218,9 +250,16 @@ class UserViewSet(ViewSet, GenericAPIView):
         return User.objects.all()
 
     def get_permissions(self):
-        if self.action.__eq__('current_user'):
+        if self.action in ['search_users', 'current_user']:
             return [permissions.IsAuthenticated()]
         return [permissions.AllowAny()]
+
+    @action(detail=False, methods=['get'])
+    def search_users(self, request):
+        current_user = request.user
+        queryset = User.objects.exclude(id=current_user.id).exclude(role='admin')
+        serializer = UserSerializer(queryset, many=True)
+        return Response(serializer.data, status=200)
 
     @action(detail=True, methods=['patch'], permission_classes=[permissions.IsAuthenticated])
     def toggle_active(self, request, pk=None):
@@ -273,7 +312,31 @@ class UserViewSet(ViewSet, GenericAPIView):
                 activity_type='login',
                 description='User logged in'
             )
-            return Response(UserSerializer(user).data, status=status.HTTP_200_OK)
+
+            # Yêu cầu OAuth2 token từ OAuth2 Provider
+            token_url = request.build_absolute_uri('/o/token/')
+            client_id = "NRhtsNVDdFncJIQ8JPR1jyhCNgajxLJKFtDAOleG"
+            client_secret = "fEIpXZRzXR16HZDBC9gONxe74ayinzwU7dZUUsvt2JUcnsfvU6FX8d3N5ow62RroNPkI6z6auYfo9kcAW8N6EL7KEerqtoVbBJte2lkMVJIdTgKx0mLbylQCtBlI9EtV"
+            payload = {
+                'grant_type': 'password',
+                'username': serializer.validated_data['username'],
+                'password': serializer.validated_data['password'],
+                'client_id': client_id,
+                'client_secret': client_secret,
+            }
+            response = requests.post(token_url, data=payload)
+            if response.status_code == 200:
+                oauth_data = response.json()
+                # Tạo custom token Firebase
+                firebase_token = create_custom_token(str(user.id))
+                return Response({
+                    'user': UserSerializer(user).data,
+                    'firebase_token': firebase_token.decode('utf-8'),  # Trả về token Firebase
+                    'access_token': oauth_data['access_token'],
+                    'refresh_token': oauth_data['refresh_token'],
+                    'expires_in': oauth_data['expires_in']
+                }, status=status.HTTP_200_OK)
+            return Response(response.json(), status=response.status_code)
         return Response("Invalid credentials", status=status.HTTP_401_UNAUTHORIZED)
 
     @action(detail=False, methods=['get'], permission_classes=[IsAuthenticated])
@@ -382,6 +445,8 @@ class AddPlaceVisitView(APIView):
 class PlaceVisitViewSet(viewsets.ModelViewSet):
     queryset = PlaceVisit.objects.all()
     serializer_class = serializers.PlaceVisitSerializer
+    pagination_class = StandardResultsSetPagination
+
 
     def get_queryset(self):
         journey_id = self.kwargs['journey_id']
@@ -455,3 +520,117 @@ class RatingCreateView(generics.CreateAPIView):
             description=f'User {self.request.user.username} rated Journey {rating.journey.name} with a score of {rating.rate}'
         )
 
+
+class ChatView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        user_a = request.user
+        user_b_id = request.data.get('user_b_id')
+
+        try:
+            user_b = User.objects.get(id=user_b_id)
+
+            chat_id = f"{min(user_a.id, user_b.id)}_{max(user_a.id, user_b.id)}"
+            chat_ref = db.reference(f'chats/{chat_id}')
+
+            if not chat_ref.get():
+                chat_ref.set({
+                    'participants': [user_a.id, user_b.id]
+                })
+
+            return Response({"chat_id": chat_id}, status=status.HTTP_201_CREATED)
+        except User.DoesNotExist:
+            return Response({"detail": "User not found."}, status=status.HTTP_404_NOT_FOUND)
+
+    def get(self, request):
+        user = request.user
+        user_chats = []
+        chats_ref = db.reference('chats')
+
+        all_chats = chats_ref.get()
+        if all_chats:
+            for chat_id, chat_data in all_chats.items():
+                if user.id in chat_data['participants']:
+                    user_chats.append({
+                        'chat_id': chat_id,
+                        'participants': chat_data['participants']
+                    })
+
+        return Response(user_chats, status=status.HTTP_200_OK)
+
+class MessageList(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, chat_id):
+        try:
+            messages_ref = db.reference(f'chats/{chat_id}/messages')
+            messages = messages_ref.get()
+            if not messages:
+                return Response({"detail": "No messages found."}, status=status.HTTP_404_NOT_FOUND)
+
+            message_list = [value for key, value in messages.items()]
+            serializer = MessageSerializer(message_list, many=True)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        except Exception as e:
+            return Response({"detail": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    def post(self, request, chat_id):
+        serializer = MessageSerializer(data=request.data)
+        if serializer.is_valid():
+            chat_data = serializer.validated_data
+            chat_data['user'] = request.user.username
+            chat_data['timestamp'] = chat_data['timestamp'].isoformat()
+            chat_data['type'] = request.data.get('type', 'sender')
+            messages_ref = db.reference(f'chats/{chat_id}/messages')
+            messages_ref.push(chat_data)
+            return Response(chat_data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+@staff_member_required
+def report_stats(request):
+    users = User.objects.annotate(report_count=models.Count('reported_reports')).filter(report_count__gt=0)
+    return render(request, 'admin/report_stats.html', {'users': users})
+
+@staff_member_required
+def user_report_details(request, user_id):
+    user = get_object_or_404(User, id=user_id)
+    reports = Report.objects.filter(reported_user=user)
+    return render(request, 'admin/user_report_details.html', {'user': user, 'reports': reports})
+
+@staff_member_required
+def deactivate_user(request, user_id):
+    user = get_object_or_404(User, id=user_id)
+    user.is_active = False
+    user.save()
+    messages.success(request, f'User {user.username} has been deactivated.')
+    return redirect('admin_user_report_details', user_id=user_id)
+
+
+def send_verification_email(request, user_id):
+    user = get_object_or_404(User, pk=user_id)
+    token = default_token_generator.make_token(user)
+    uid = urlsafe_base64_encode(force_bytes(user.pk))
+    link = reverse('password_reset_confirm', kwargs={'uidb64': uid, 'token': token})
+    reset_url = f"{request.scheme}://{request.get_host()}{link}"
+
+    message = render_to_string('email_template.html', {
+        'user': user,
+        'reset_url': reset_url,
+    })
+
+    send_mail(
+        'Password Reset Request',
+        message,
+        'huynhduydong92@gmail.com', 
+        [user.email],  
+        fail_silently=False,
+    )
+
+    return HttpResponse('Verification email has been sent.')
+
+
+class CustomPasswordResetConfirmView(PasswordResetConfirmView):
+    template_name = 'password_reset_confirm.html'
+    success_url = reverse_lazy('password_reset_complete')
