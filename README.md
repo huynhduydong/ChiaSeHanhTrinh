@@ -1,6 +1,7 @@
 # Journey App Management
 ## Introduction
-    Journey App is a comprehensive journey planning and tracking tool with a seamless user experience on both Android and iOS, built using React Native. The app offers features like journey creation, detailed logs, and user profile management. Powered by a Django backend, it includes functionalities such as user authentication, journey tracking, image uploads, activity logging, chat, data access, and email notifications, making it an all-in-one solution for travelers.
+- Journey App is a comprehensive journey planning and tracking tool with a seamless user experience on both Android and iOS, built using React Native
+- The app offers features like journey creation, detailed logs, and user profile management. Powered by a Django backend, it includes functionalities such as user authentication, journey tracking, image uploads, activity logging, chat, data access, and email notifications, making it an all-in-one solution for travelers.
 ## Features
 ### Technologies and Framework
 - Back-end
