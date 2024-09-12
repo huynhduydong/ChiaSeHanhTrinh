@@ -1,6 +1,5 @@
 # Journey App Management
 ## Introduction
-### Project: Journey App Management
     Journey App is a comprehensive journey planning and tracking tool with a seamless user experience on both Android and iOS, built using React Native. The app offers features like journey creation, detailed logs, and user profile management. Powered by a Django backend, it includes functionalities such as user authentication, journey tracking, image uploads, activity logging, chat, data access, and email notifications, making it an all-in-one solution for travelers.
 ## Features
 ### Technologies and Framework
@@ -32,25 +31,25 @@
    ```
 4. Run the development server:
    ```
-npm run android
-    ```
+    npm run android
+   ```
 5. Navigate to the project back-end:
-    ```
+   ```
    cd journeyapp
    ```
 6. Create a virtual environment:
-    ```
+   ```
    python -m venv venv
    ```
 7. Install dependencies:
-    ```
+   ```
    pip install -r requirements.txt
    ```
 8. Run migrations:
-    ```
+   ```
    python manage.py migrate
    ```
-8. Run the development server:
-    ```
+9. Run the development server:
+   ```
    python manage.py runserver
    ```
